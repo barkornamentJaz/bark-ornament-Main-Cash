@@ -255,8 +255,49 @@ const SHEET_ID='1q6CwhfaCfzvq8SdS1MVxFBhYh2L1VHWMWJj_L1Ia_bc';
 const BASE='https://docs.google.com/spreadsheets/d/'+SHEET_ID+'/gviz/tq?tqx=out:json&sheet=';
 const CN='Bark Ornament (Pvt) Ltd', CA='No. 59A, Bekkegama, Panadura.';
 
+const APPS_SCRIPT_URL='https://script.google.com/macros/s/AKfycbxJ9WqxJrZes34GxXFh1aKNWGk7MZcWwmrVJ_CLMJ47UjXSp7Rf7Cs5hukntUQKYZgflQ/exec';
+
 let OB=JSON.parse(localStorage.getItem('cbOB2')||'{"amt":0,"date":"","month":"Cash Book 25/26"}');
-function saveOBStore(){localStorage.setItem('cbOB2',JSON.stringify(OB));}
+
+// Load Opening Balance from "Settings" sheet — syncs across all devices
+async function loadOBFromSheet(){
+  try{
+    const res=await fetch(BASE+encodeURIComponent('Settings'));
+    const raw=await res.text();
+    const j=JSON.parse(raw.substring(47).slice(0,-2));
+    const rows=j.table.rows;
+    if(rows&&rows.length>=3){
+      const get=i=>rows[i]&&rows[i].c&&rows[i].c[1]?rows[i].c[1].v:'';
+      OB={
+        amt:parseFloat(get(0))||0,
+        date:String(get(1)||''),
+        month:String(get(2)||'Cash Book 25/26')
+      };
+      localStorage.setItem('cbOB2',JSON.stringify(OB));
+    }
+  }catch(e){
+    // fallback: keep localStorage value
+  }
+}
+
+// Save Opening Balance to Google Sheet via existing Apps Script
+// Uses your existing "update_cell" action to write each field into the Settings sheet
+async function saveOBStore(){
+  localStorage.setItem('cbOB2',JSON.stringify(OB));
+  try{
+    const post=async(payload)=>{
+      const fd=new FormData();
+      fd.append('payload',JSON.stringify(payload));
+      await fetch(APPS_SCRIPT_URL,{method:'POST',body:fd});
+    };
+    // Write all 3 values into Settings sheet rows 2,3,4 (row 1 = header)
+    await Promise.all([
+      post({action:'update_cell',sheet:'Settings',row:2,col:'value',value:OB.amt}),
+      post({action:'update_cell',sheet:'Settings',row:3,col:'value',value:OB.date}),
+      post({action:'update_cell',sheet:'Settings',row:4,col:'value',value:OB.month})
+    ]);
+  }catch(e){}
+}
 
 let allEntries=[];
 
@@ -291,6 +332,7 @@ async function fetchSheet(sheet){
 async function loadAll(){
   document.getElementById('tBody').innerHTML='<tr class="empty-row"><td colspan="8">Loading from Google Sheets…</td></tr>';
   try{
+    await loadOBFromSheet();
     const [reimbs,vouchers]=await Promise.all([fetchSheet('Reimbursement'),fetchSheet('Vouchers')]);
 
     // DEBIT — Cash Reimbursements = cash coming IN to the hand
@@ -420,14 +462,16 @@ function openOBModal(){
   document.getElementById('obModal').classList.add('open');
 }
 function closeOBModal(){document.getElementById('obModal').classList.remove('open');}
-function saveOB(){
+async function saveOB(){
   const date=document.getElementById('obDate').value;
   const month=document.getElementById('obMonth').value.trim();
   const amt=parseFloat(document.getElementById('obAmt').value)||0;
   const cents=Math.min(99,Math.max(0,parseInt(document.getElementById('obCents').value)||0));
   OB={amt:amt+cents/100,date,month};
-  saveOBStore(); renderTable(); updateStats();
-  closeOBModal(); toast('✅ Opening balance saved','var(--sage)');
+  closeOBModal(); renderTable(); updateStats();
+  toast('💾 Saving to Google Sheets…','var(--sky)');
+  await saveOBStore();
+  toast('✅ Opening balance saved — synced to all devices','var(--sage)');
 }
 
 function clearF(){
