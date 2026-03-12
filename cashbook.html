@@ -161,6 +161,7 @@ tbody td{padding:10px 14px;font-size:12.5px;vertical-align:middle;}
     </div>
     <div class="hero-actions">
       <button class="btn btn-ghost" onclick="loadAll()">↺ Refresh</button>
+      <button class="btn btn-ghost" onclick="debugSheets()" style="font-size:10px;opacity:0.6">🔍 Debug</button>
       <button class="btn btn-ghost" onclick="printRegister()">🖨 Print Register</button>
       <button class="btn btn-gold" onclick="exportCSV()">⬇ Export CSV</button>
     </div>
@@ -292,10 +293,19 @@ const fmtD = v => {
   return v;
 };
 const parseD = v => {
-  if(!v) return null;
-  if(typeof v==='string'&&v.startsWith('Date(')){const p=v.replace('Date(','').replace(')','').split(',');return new Date(+p[0],+p[1],+p[2]);}
-  if(typeof v==='string'&&/^\d{4}-\d{2}-\d{2}/.test(v)){const p=v.split('-');return new Date(+p[0],+p[1]-1,+p[2].substring(0,2));}
-  if(typeof v==='string'&&v.includes('/')){const p=v.split('/');return p.length===3?new Date(+p[2],+p[1]-1,+p[0]):null;}
+  if(!v && v!==0) return null;
+  // Google Sheets serial number (days since 1899-12-30)
+  if(typeof v==='number'){const d=new Date(Math.round((v-25569)*86400*1000));return isNaN(d)?null:d;}
+  if(typeof v!=='string') return null;
+  v = v.trim();
+  // Date(2026,1,5) format from gviz API
+  if(v.startsWith('Date(')){const p=v.replace('Date(','').replace(')','').split(',');return new Date(+p[0],+p[1],+p[2]);}
+  // YYYY-MM-DD or YYYY-MM-DDThh:mm:ss
+  if(/^\d{4}-\d{2}-\d{2}/.test(v)){const p=v.split('T')[0].split('-');return new Date(+p[0],+p[1]-1,+p[2]);}
+  // DD/MM/YYYY
+  if(/^\d{2}\/\d{2}\/\d{4}/.test(v)){const p=v.split('/');return new Date(+p[2],+p[1]-1,+p[0]);}
+  // MM/DD/YYYY
+  if(v.includes('/')){const p=v.split('/');return p.length===3?new Date(+p[2],+p[1]-1,+p[0]):null;}
   return null;
 };
 
@@ -440,7 +450,7 @@ async function loadAll(){
       .filter(r=>(r['amount']||r['Amount'])&&(r['date']||r['Date']||r['Description']))
       .map(r=>({
         type:'DR',
-        date: r['date']||r['Date'],
+        date: r['Date']||r['date']||r['']||r[''],
         cheque: r['Reference']||'',
         desc: r['Description']||'Cash Reimbursement',
         ref: r['Reference']||'',
@@ -452,7 +462,7 @@ async function loadAll(){
       .filter(r=>(r['Amount (Rs)']||r['Amount'])&&(r['Date']||r['Payee Name']||r['Payee']))
       .map(r=>({
         type:'CR',
-        date: r['date']||r['Date'],
+        date: r['Date']||r['date']||r['']||r[''],
         cheque: '',
         desc: r['Description']||(r['Payee Name']||r['Payee']?'Payment — '+(r['Payee Name']||r['Payee']):'Voucher Payment'),
         ref: r['Voucher No']||'',
@@ -707,6 +717,22 @@ function exportCSV(){
   a.download   = 'cashbook_'+(ob.label||currentMonthKey).replace(/\s+/g,'_')+'_'+new Date().toISOString().slice(0,10)+'.csv';
   a.click();
   toast('⬇ CSV exported','var(--sage)');
+}
+
+// ── DEBUG: shows first 5 raw rows from each sheet ───────────────────────────
+async function debugSheets(){
+  try{
+    const [reimbs, vouchers] = await Promise.all([fetchSheet('Reimbursement'), fetchSheet('Vouchers')]);
+    const r1 = reimbs.slice(0,3);
+    const v1 = vouchers.slice(0,3);
+    const keys_r = r1.length ? Object.keys(r1[0]) : [];
+    const keys_v = v1.length ? Object.keys(v1[0]) : [];
+    let msg = '=== REIMBURSEMENT columns ===\n' + JSON.stringify(keys_r) + '\n\n';
+    msg += 'First row: ' + JSON.stringify(r1[0]) + '\n\n';
+    msg += '=== VOUCHERS columns ===\n' + JSON.stringify(keys_v) + '\n\n';
+    msg += 'First row: ' + JSON.stringify(v1[0]);
+    alert(msg);
+  } catch(e){ alert('Error: '+e.message); }
 }
 
 loadAll();
