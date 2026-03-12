@@ -69,6 +69,11 @@ nav{background:var(--ink);display:flex;align-items:center;padding:0 28px;height:
 .info-banner{background:var(--sky-bg);border:1.5px solid var(--sky);border-radius:8px;padding:12px 16px;margin-bottom:16px;font-size:12px;color:var(--ink2);display:flex;align-items:center;gap:10px;}
 .info-banner b{color:var(--sky);}
 
+.month-bar{display:flex;align-items:center;gap:10px;margin-bottom:16px;background:var(--white);border:1.5px solid var(--border);border-radius:10px;padding:12px 18px;flex-wrap:wrap;}
+.month-bar label{font-family:'Space Mono',monospace;font-size:9px;text-transform:uppercase;letter-spacing:1.2px;color:var(--ink4);}
+.month-sel{padding:7px 12px;border-radius:6px;border:1.5px solid var(--border);font-size:13px;font-family:'DM Sans',sans-serif;color:var(--ink);background:var(--white);outline:none;cursor:pointer;font-weight:600;}
+.month-sel:focus{border-color:var(--ink);}
+.month-ob-badge{font-family:'Space Mono',monospace;font-size:11px;color:var(--gold);background:var(--gold-bg);padding:4px 10px;border-radius:20px;margin-left:auto;}
 .filter-bar{display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap;align-items:center;}
 .fi{padding:8px 12px;border-radius:6px;border:1.5px solid var(--border);font-size:12px;font-family:'DM Sans',sans-serif;color:var(--ink);background:var(--white);outline:none;transition:border .15s;}
 .fi:focus{border-color:var(--ink);}
@@ -156,7 +161,6 @@ tbody td{padding:10px 14px;font-size:12.5px;vertical-align:middle;}
     </div>
     <div class="hero-actions">
       <button class="btn btn-ghost" onclick="loadAll()">↺ Refresh</button>
-      <button class="btn btn-ghost" onclick="openOBModal()">⚙ Opening Balance</button>
       <button class="btn btn-ghost" onclick="printRegister()">🖨 Print Register</button>
       <button class="btn btn-gold" onclick="exportCSV()">⬇ Export CSV</button>
     </div>
@@ -183,6 +187,15 @@ tbody td{padding:10px 14px;font-size:12.5px;vertical-align:middle;}
 </div>
 
 <div class="page-body">
+
+  <div class="month-bar">
+    <label>📅 Viewing Month</label>
+    <select class="month-sel" id="monthSel" onchange="onMonthChange()">
+      <option value="">— Select Month —</option>
+    </select>
+    <button class="btn btn-paper" onclick="openOBModal()" style="font-size:11px;padding:6px 12px;">⚙ Set Opening Balance</button>
+    <span class="month-ob-badge" id="monthObBadge">OB: —</span>
+  </div>
 
   <div class="filter-bar">
     <input class="fi fi-search" id="searchInput" placeholder="Search description, cheque no, voucher no…" oninput="renderTable()"/>
@@ -254,174 +267,268 @@ tbody td{padding:10px 14px;font-size:12.5px;vertical-align:middle;}
 const SHEET_ID='1q6CwhfaCfzvq8SdS1MVxFBhYh2L1VHWMWJj_L1Ia_bc';
 const BASE='https://docs.google.com/spreadsheets/d/'+SHEET_ID+'/gviz/tq?tqx=out:json&sheet=';
 const CN='Bark Ornament (Pvt) Ltd', CA='No. 59A, Bekkegama, Panadura.';
-
 const APPS_SCRIPT_URL='https://script.google.com/macros/s/AKfycbxJ9WqxJrZes34GxXFh1aKNWGk7MZcWwmrVJ_CLMJ47UjXSp7Rf7Cs5hukntUQKYZgflQ/exec';
 
-let OB=JSON.parse(localStorage.getItem('cbOB2')||'{"amt":0,"date":"","month":"Cash Book 25/26"}');
+// ── Monthly Opening Balances ─────────────────────────────────────────────────
+// monthlyOB = { '2025-02': { label:'February 2025', amt:50000 }, ... }
+let monthlyOB = {};
+let currentMonthKey = '';   // e.g. '2025-03'
+let allEntries = [];
 
-// Load Opening Balance from "Settings" sheet — syncs across all devices
-async function loadOBFromSheet(){
-  try{
-    const res=await fetch(BASE+encodeURIComponent('Settings'));
-    const raw=await res.text();
-    const j=JSON.parse(raw.substring(47).slice(0,-2));
-    const rows=j.table.rows;
-    if(rows&&rows.length>=3){
-      const get=i=>rows[i]&&rows[i].c&&rows[i].c[1]?rows[i].c[1].v:'';
-      OB={
-        amt:parseFloat(get(0))||0,
-        date:String(get(1)||''),
-        month:String(get(2)||'Cash Book 25/26')
-      };
-      localStorage.setItem('cbOB2',JSON.stringify(OB));
-    }
-  }catch(e){
-    // fallback: keep localStorage value
-  }
-}
+// Derived OB for current month
+function getOB(){ return monthlyOB[currentMonthKey] || { amt:0, label:'' }; }
 
-// Save Opening Balance to Google Sheet via existing Apps Script
-// Uses your existing "update_cell" action to write each field into the Settings sheet
-async function saveOBStore(){
-  localStorage.setItem('cbOB2',JSON.stringify(OB));
-  try{
-    const post=async(payload)=>{
-      const fd=new FormData();
-      fd.append('payload',JSON.stringify(payload));
-      await fetch(APPS_SCRIPT_URL,{method:'POST',body:fd});
-    };
-    // Write all 3 values into Settings sheet rows 2,3,4 (row 1 = header)
-    await Promise.all([
-      post({action:'update_cell',sheet:'Settings',row:2,col:'value',value:OB.amt}),
-      post({action:'update_cell',sheet:'Settings',row:3,col:'value',value:OB.date}),
-      post({action:'update_cell',sheet:'Settings',row:4,col:'value',value:OB.month})
-    ]);
-  }catch(e){}
-}
+const D = new Date();
+const DN=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+const MN=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const MONTH_FULL=['January','February','March','April','May','June','July','August','September','October','November','December'];
+document.getElementById('navDate').textContent = DN[D.getDay()]+' '+MN[D.getMonth()]+' '+D.getDate();
 
-let allEntries=[];
-
-const D=new Date();
-const DN=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'],MN=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-document.getElementById('navDate').textContent=DN[D.getDay()]+' '+MN[D.getMonth()]+' '+D.getDate();
-
-const fmt=n=>{const x=parseFloat(n);return isNaN(x)?'—':'Rs '+x.toLocaleString('en-LK',{minimumFractionDigits:2,maximumFractionDigits:2});};
-const fmtD=v=>{
-  if(!v)return'—';
+const fmt  = n => { const x=parseFloat(n); return isNaN(x)?'—':'Rs '+x.toLocaleString('en-LK',{minimumFractionDigits:2,maximumFractionDigits:2}); };
+const fmtD = v => {
+  if(!v) return '—';
   if(typeof v==='string'&&v.startsWith('Date(')){const p=v.replace('Date(','').replace(')','').split(',');const d=new Date(+p[0],+p[1],+p[2]);return String(d.getDate()).padStart(2,'0')+'/'+String(d.getMonth()+1).padStart(2,'0')+'/'+d.getFullYear();}
   if(typeof v==='string'&&/^\d{4}-\d{2}-\d{2}/.test(v)){const p=v.split('-');return p[2].substring(0,2)+'/'+p[1]+'/'+p[0];}
   return v;
 };
-const parseD=v=>{
-  if(!v)return null;
+const parseD = v => {
+  if(!v) return null;
   if(typeof v==='string'&&v.startsWith('Date(')){const p=v.replace('Date(','').replace(')','').split(',');return new Date(+p[0],+p[1],+p[2]);}
   if(typeof v==='string'&&/^\d{4}-\d{2}-\d{2}/.test(v)){const p=v.split('-');return new Date(+p[0],+p[1]-1,+p[2].substring(0,2));}
   if(typeof v==='string'&&v.includes('/')){const p=v.split('/');return p.length===3?new Date(+p[2],+p[1]-1,+p[0]):null;}
   return null;
 };
-const toast=(m,c)=>{const t=document.getElementById('toast');t.textContent=m;t.style.background=c||'var(--ink)';t.classList.add('show');setTimeout(()=>t.classList.remove('show'),3200);};
 
+// Get YYYY-MM key from a date value
+const monthKey = v => {
+  const d = parseD(v);
+  if(!d) return '';
+  return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');
+};
+
+const toast = (m,c) => { const t=document.getElementById('toast');t.textContent=m;t.style.background=c||'var(--ink)';t.classList.add('show');setTimeout(()=>t.classList.remove('show'),3200); };
+
+// ── Google Sheet fetch ───────────────────────────────────────────────────────
 async function fetchSheet(sheet){
-  const res=await fetch(BASE+encodeURIComponent(sheet));
-  const raw=await res.text();
-  const j=JSON.parse(raw.substring(47).slice(0,-2));
-  const cols=j.table.cols.map(c=>c.label);
+  const res = await fetch(BASE+encodeURIComponent(sheet));
+  const raw = await res.text();
+  const j   = JSON.parse(raw.substring(47).slice(0,-2));
+  const cols = j.table.cols.map(c=>c.label);
   return j.table.rows.map(r=>Object.fromEntries(cols.map((c,i)=>[c,r.c[i]?r.c[i].v:''])));
 }
 
+// ── Load monthlyOB from Settings sheet ──────────────────────────────────────
+// Settings sheet columns: month_key | label | opening_balance
+async function loadSettingsFromSheet(){
+  try{
+    const rows = await fetchSheet('Settings');
+    if(!rows || rows.length === 0){
+      toast('⚠️ Settings sheet is empty — please add month rows','var(--rust)');
+      const cached = localStorage.getItem('monthlyOB');
+      if(cached) monthlyOB = JSON.parse(cached);
+      return;
+    }
+    monthlyOB = {};
+    rows.forEach(r=>{
+      const k = (r['month_key']||'').trim();
+      if(!k) return;
+      monthlyOB[k] = {
+        label: r['label'] || k,
+        amt:   parseFloat(r['opening_balance']) || 0
+      };
+    });
+    // Cache locally as offline backup
+    localStorage.setItem('monthlyOB', JSON.stringify(monthlyOB));
+    const count = Object.keys(monthlyOB).length;
+    toast('📂 '+count+' month(s) loaded from Settings sheet','var(--sky)');
+  } catch(e){
+    toast('⚠️ Could not read Settings sheet: '+e.message,'var(--rust)');
+    // Fallback to localStorage
+    const cached = localStorage.getItem('monthlyOB');
+    if(cached){ monthlyOB = JSON.parse(cached); toast('📱 Using locally cached opening balances','var(--gold)'); }
+  }
+}
+
+// ── Save one month's OB to Settings sheet ───────────────────────────────────
+async function saveMonthOB(key, label, amt){
+  monthlyOB[key] = { label, amt };
+  localStorage.setItem('monthlyOB', JSON.stringify(monthlyOB));
+
+  // Find the row number in Settings sheet (row 1 = header, data from row 2)
+  const keys   = Object.keys(monthlyOB).sort();
+  const rowNum = keys.indexOf(key) + 2; // +2 because row 1 is header
+
+  try{
+    const fd = new FormData();
+    fd.append('payload', JSON.stringify({
+      action:'update',
+      sheet:'Settings',
+      row: rowNum,
+      data:{ month_key: key, label: label, opening_balance: amt }
+    }));
+    const res  = await fetch(APPS_SCRIPT_URL, { method:'POST', body:fd });
+    const json = await res.json();
+    if(json.success) return true;
+
+    // If update failed, try append (new month not yet in sheet)
+    const fd2 = new FormData();
+    fd2.append('payload', JSON.stringify({
+      action:'append',
+      sheet:'Settings',
+      data:{ month_key: key, label: label, opening_balance: amt }
+    }));
+    await fetch(APPS_SCRIPT_URL, { method:'POST', body:fd2 });
+    return true;
+  } catch(e){
+    return false;
+  }
+}
+
+// ── Populate month dropdown ──────────────────────────────────────────────────
+function buildMonthDropdown(){
+  const sel = document.getElementById('monthSel');
+  const prev = sel.value;
+
+  // Collect all months from entries + monthlyOB
+  const keys = new Set(Object.keys(monthlyOB));
+  allEntries.forEach(r=>{ const k=monthKey(r.date); if(k) keys.add(k); });
+
+  // Always include current calendar month
+  const nowKey = D.getFullYear()+'-'+String(D.getMonth()+1).padStart(2,'0');
+  keys.add(nowKey);
+
+  const sorted = [...keys].sort();
+  sel.innerHTML = '<option value="">— Select Month —</option>';
+  sorted.forEach(k=>{
+    const [y,m] = k.split('-');
+    const label = monthlyOB[k]?.label || (MONTH_FULL[parseInt(m)-1]+' '+y);
+    const opt = document.createElement('option');
+    opt.value = k; opt.textContent = label;
+    sel.appendChild(opt);
+  });
+
+  // Restore selection or default to latest month
+  if(prev && sorted.includes(prev)){
+    sel.value = prev;
+  } else {
+    sel.value = sorted[sorted.length-1] || '';
+  }
+  currentMonthKey = sel.value;
+  updateMonthBadge();
+}
+
+function updateMonthBadge(){
+  const ob = getOB();
+  document.getElementById('monthObBadge').textContent = 'OB: ' + fmt(ob.amt);
+}
+
+function onMonthChange(){
+  currentMonthKey = document.getElementById('monthSel').value;
+  updateMonthBadge();
+  renderTable();
+  updateStats();
+}
+
+// ── Load all transactions ────────────────────────────────────────────────────
 async function loadAll(){
   document.getElementById('tBody').innerHTML='<tr class="empty-row"><td colspan="8">Loading from Google Sheets…</td></tr>';
   try{
-    await loadOBFromSheet();
-    const [reimbs,vouchers]=await Promise.all([fetchSheet('Reimbursement'),fetchSheet('Vouchers')]);
+    await loadSettingsFromSheet();
+    const [reimbs, vouchers] = await Promise.all([fetchSheet('Reimbursement'), fetchSheet('Vouchers')]);
 
-    // DEBIT — Cash Reimbursements = cash coming IN to the hand
-    const drRows=reimbs
-      .filter(r=>( r['amount']||r['Amount'] )&&(r['']||r['']||r['date']||r['Date']||r['Description']))
+    const drRows = reimbs
+      .filter(r=>(r['amount']||r['Amount'])&&(r['date']||r['Date']||r['Description']))
       .map(r=>({
         type:'DR',
-        date:r['']||r['']||r['date']||r['Date'],
-        cheque:r['Reference']||'',
-        desc:r['Description']||'Cash Reimbursement',
-        ref:r['Reference']||'',
-        debit:parseFloat(r['amount']||r['Amount'])||0,
-        credit:0
+        date: r['date']||r['Date'],
+        cheque: r['Reference']||'',
+        desc: r['Description']||'Cash Reimbursement',
+        ref: r['Reference']||'',
+        debit: parseFloat(r['amount']||r['Amount'])||0,
+        credit: 0
       }));
 
-    // CREDIT — Vouchers = cash going OUT
-    const crRows=vouchers
-      .filter(r=>( r['Amount (Rs)']||r['Amount'] )&&(r['Date']||r['Payee Name']||r['Payee']))
+    const crRows = vouchers
+      .filter(r=>(r['Amount (Rs)']||r['Amount'])&&(r['Date']||r['Payee Name']||r['Payee']))
       .map(r=>({
         type:'CR',
-        date:r['']||r['']||r['date']||r['Date'],
-        cheque:'',
-        desc:r['Description']||(r['Payee Name']||r['Payee']?'Payment — '+(r['Payee Name']||r['Payee']):'Voucher Payment'),
-        ref:r['Voucher No']||'',
-        debit:0,
-        credit:parseFloat(r['Amount (Rs)']||r['Amount'])||0
+        date: r['date']||r['Date'],
+        cheque: '',
+        desc: r['Description']||(r['Payee Name']||r['Payee']?'Payment — '+(r['Payee Name']||r['Payee']):'Voucher Payment'),
+        ref: r['Voucher No']||'',
+        debit: 0,
+        credit: parseFloat(r['Amount (Rs)']||r['Amount'])||0
       }));
 
-    // Merge & sort by date ascending
-    allEntries=[...drRows,...crRows].sort((a,b)=>{
-      const da=parseD(a.date),db=parseD(b.date);
-      if(!da&&!db)return 0; if(!da)return 1; if(!db)return-1;
+    allEntries = [...drRows,...crRows].sort((a,b)=>{
+      const da=parseD(a.date), db=parseD(b.date);
+      if(!da&&!db) return 0; if(!da) return 1; if(!db) return -1;
       return da-db;
     });
 
-    renderTable(); updateStats();
-    toast('✅ '+drRows.length+' debits · '+crRows.length+' credits loaded','var(--sage)');
-  }catch(e){
+    buildMonthDropdown();
+    renderTable();
+    updateStats();
+    toast('✅ Data loaded — '+drRows.length+' debits · '+crRows.length+' credits','var(--sage)');
+  } catch(e){
     document.getElementById('tBody').innerHTML='<tr class="empty-row"><td colspan="8">⚠️ Could not load — ensure Google Sheet is set to public.</td></tr>';
     toast('⚠️ Load failed — check sheet is public','var(--rust)');
   }
 }
 
-function withBalances(rows){
-  let bal=parseFloat(OB.amt)||0;
-  return rows.map(r=>{bal=bal+r.debit-r.credit;return{...r,balance:bal};});
+// ── Filter entries to current month ─────────────────────────────────────────
+function entriesForMonth(key){
+  if(!key) return allEntries;
+  return allEntries.filter(r => monthKey(r.date) === key);
 }
 
+function withBalances(rows){
+  let bal = parseFloat(getOB().amt) || 0;
+  return rows.map(r=>{ bal = bal+r.debit-r.credit; return {...r, balance:bal}; });
+}
+
+// ── Render table ─────────────────────────────────────────────────────────────
 function renderTable(){
-  const q=(document.getElementById('searchInput').value||'').toLowerCase();
-  const tf=document.getElementById('typeFilter').value;
-  const from=document.getElementById('fFrom').value;
-  const to=document.getElementById('fTo').value;
+  const q    = (document.getElementById('searchInput').value||'').toLowerCase();
+  const tf   = document.getElementById('typeFilter').value;
+  const from = document.getElementById('fFrom').value;
+  const to   = document.getElementById('fTo').value;
 
-  // Compute running balance on ALL entries first, then filter display
-  const allWithBal=withBalances(allEntries);
-  const closing=allWithBal.length?allWithBal[allWithBal.length-1].balance:(parseFloat(OB.amt)||0);
+  const monthEntries = entriesForMonth(currentMonthKey);
+  const allWithBal   = withBalances(monthEntries);
+  const closing      = allWithBal.length ? allWithBal[allWithBal.length-1].balance : (parseFloat(getOB().amt)||0);
 
-  const filtered=allWithBal.filter(r=>{
-    if(tf&&r.type!==tf)return false;
-    if(q&&!((r.desc||'')+(r.cheque||'')+(r.ref||'')).toLowerCase().includes(q))return false;
-    if(from||to){const d=parseD(r.date);if(!d)return false;if(from&&d<new Date(from))return false;if(to&&d>new Date(to+'T23:59:59'))return false;}
+  const filtered = allWithBal.filter(r=>{
+    if(tf && r.type!==tf) return false;
+    if(q && !((r.desc||'')+(r.cheque||'')+(r.ref||'')).toLowerCase().includes(q)) return false;
+    if(from||to){ const d=parseD(r.date); if(!d) return false; if(from&&d<new Date(from)) return false; if(to&&d>new Date(to+'T23:59:59')) return false; }
     return true;
   });
 
-  document.getElementById('cntBadge').textContent=filtered.length;
-  document.getElementById('balDisplay').textContent='Closing Balance: '+fmt(closing);
+  document.getElementById('cntBadge').textContent  = filtered.length;
+  document.getElementById('balDisplay').textContent = 'Closing Balance: '+fmt(closing);
 
-  if(!filtered.length&&!allEntries.length){
-    document.getElementById('tBody').innerHTML='<tr class="empty-row"><td colspan="8">No data — click Refresh to load from Google Sheets.</td></tr>';
+  if(!filtered.length && !monthEntries.length){
+    document.getElementById('tBody').innerHTML = '<tr class="empty-row"><td colspan="8">No entries for this month.</td></tr>';
     return;
   }
   if(!filtered.length){
-    document.getElementById('tBody').innerHTML='<tr class="empty-row"><td colspan="8">No entries match the current filter.</td></tr>';
+    document.getElementById('tBody').innerHTML = '<tr class="empty-row"><td colspan="8">No entries match the current filter.</td></tr>';
     return;
   }
 
-  // Opening Balance row always at top
-  const obRow=`<tr class="ob-row">
-    <td class="date-cell">${fmtD(OB.date)||'—'}</td>
+  const ob = getOB();
+  const obRow = `<tr class="ob-row">
+    <td class="date-cell">${currentMonthKey ? '01/'+currentMonthKey.split('-')[1]+'/'+currentMonthKey.split('-')[0] : '—'}</td>
     <td></td>
-    <td class="desc-cell" style="color:var(--gold);font-weight:700">Opening Balance</td>
+    <td class="desc-cell" style="color:var(--gold);font-weight:700">Opening Balance — ${ob.label||currentMonthKey}</td>
     <td></td>
     <td><span class="type-pill tp-ob">OB</span></td>
     <td></td><td></td>
-    <td class="bal-cell" style="color:var(--gold)">${fmt(OB.amt||0)}</td>
+    <td class="bal-cell" style="color:var(--gold)">${fmt(ob.amt||0)}</td>
   </tr>`;
 
-  const dataRows=filtered.map(r=>`<tr>
+  const dataRows = filtered.map(r=>`<tr>
     <td class="date-cell">${fmtD(r.date)}</td>
     <td class="cheque-cell">${r.cheque||''}</td>
     <td class="desc-cell">${r.desc||'—'}</td>
@@ -432,64 +539,81 @@ function renderTable(){
     <td class="bal-cell${r.balance<0?' bal-neg':''}">${fmt(r.balance)}</td>
   </tr>`).join('');
 
-  const totDR=filtered.reduce((s,r)=>s+r.debit,0);
-  const totCR=filtered.reduce((s,r)=>s+r.credit,0);
-  const totRow=`<tr class="tot-row">
+  const totDR  = filtered.reduce((s,r)=>s+r.debit,0);
+  const totCR  = filtered.reduce((s,r)=>s+r.credit,0);
+  const totRow = `<tr class="tot-row">
     <td colspan="5" style="text-align:right">TOTAL</td>
     <td style="text-align:right;color:var(--sage)">${fmt(totDR)}</td>
     <td style="text-align:right;color:var(--rust)">${fmt(totCR)}</td>
     <td style="text-align:right">${fmt(closing)}</td>
   </tr>`;
 
-  document.getElementById('tBody').innerHTML=obRow+dataRows+totRow;
+  document.getElementById('tBody').innerHTML = obRow + dataRows + totRow;
 }
 
+// ── Stats ────────────────────────────────────────────────────────────────────
 function updateStats(){
-  const totalDR=allEntries.reduce((s,r)=>s+r.debit,0);
-  const totalCR=allEntries.reduce((s,r)=>s+r.credit,0);
-  const closing=(parseFloat(OB.amt)||0)+totalDR-totalCR;
-  document.getElementById('stOB').textContent=fmt(OB.amt||0);
-  document.getElementById('stDR').textContent=fmt(totalDR);
-  document.getElementById('stCR').textContent=fmt(totalCR);
-  document.getElementById('stBal').textContent=fmt(closing);
+  const monthEntries = entriesForMonth(currentMonthKey);
+  const totalDR  = monthEntries.reduce((s,r)=>s+r.debit,0);
+  const totalCR  = monthEntries.reduce((s,r)=>s+r.credit,0);
+  const closing  = (parseFloat(getOB().amt)||0) + totalDR - totalCR;
+  document.getElementById('stOB').textContent  = fmt(getOB().amt||0);
+  document.getElementById('stDR').textContent  = fmt(totalDR);
+  document.getElementById('stCR').textContent  = fmt(totalCR);
+  document.getElementById('stBal').textContent = fmt(closing);
 }
 
+// ── Opening Balance Modal ────────────────────────────────────────────────────
 function openOBModal(){
-  document.getElementById('obDate').value=OB.date||D.toISOString().split('T')[0];
-  document.getElementById('obMonth').value=OB.month||'';
-  document.getElementById('obAmt').value=Math.floor(OB.amt||0)||'';
-  document.getElementById('obCents').value=Math.round(((OB.amt||0)%1)*100)||'0';
+  if(!currentMonthKey){ toast('⚠️ Please select a month first','var(--rust)'); return; }
+  const ob = getOB();
+  const [y,m] = currentMonthKey.split('-');
+  document.getElementById('obMonth').value = ob.label || (MONTH_FULL[parseInt(m)-1]+' '+y);
+  document.getElementById('obDate').value  = currentMonthKey+'-01';
+  document.getElementById('obAmt').value   = Math.floor(ob.amt||0)||'';
+  document.getElementById('obCents').value = Math.round(((ob.amt||0)%1)*100)||'0';
   document.getElementById('obModal').classList.add('open');
 }
-function closeOBModal(){document.getElementById('obModal').classList.remove('open');}
+function closeOBModal(){ document.getElementById('obModal').classList.remove('open'); }
+
 async function saveOB(){
-  const date=document.getElementById('obDate').value;
-  const month=document.getElementById('obMonth').value.trim();
-  const amt=parseFloat(document.getElementById('obAmt').value)||0;
-  const cents=Math.min(99,Math.max(0,parseInt(document.getElementById('obCents').value)||0));
-  OB={amt:amt+cents/100,date,month};
-  closeOBModal(); renderTable(); updateStats();
+  if(!currentMonthKey){ toast('⚠️ No month selected','var(--rust)'); return; }
+  const label = document.getElementById('obMonth').value.trim();
+  const amt   = parseFloat(document.getElementById('obAmt').value)||0;
+  const cents = Math.min(99,Math.max(0,parseInt(document.getElementById('obCents').value)||0));
+  const total = amt + cents/100;
+
+  closeOBModal();
+  monthlyOB[currentMonthKey] = { label, amt: total };
+  updateMonthBadge();
+  buildMonthDropdown();
+  renderTable(); updateStats();
+
   toast('💾 Saving to Google Sheets…','var(--sky)');
-  await saveOBStore();
-  toast('✅ Opening balance saved — synced to all devices','var(--sage)');
+  const ok = await saveMonthOB(currentMonthKey, label, total);
+  toast(ok ? '✅ Opening balance saved — synced to all devices' : '⚠️ Saved locally only — check connection','var(--sage)');
 }
 
+// ── Filters ──────────────────────────────────────────────────────────────────
 function clearF(){
-  ['searchInput'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('searchInput').value='';
   document.getElementById('typeFilter').value='';
   document.getElementById('fFrom').value='';
   document.getElementById('fTo').value='';
   renderTable();
 }
 
+// ── Print ────────────────────────────────────────────────────────────────────
 function printRegister(){
-  const allWithBal=withBalances(allEntries);
-  const totalDR=allEntries.reduce((s,r)=>s+r.debit,0);
-  const totalCR=allEntries.reduce((s,r)=>s+r.credit,0);
-  const closing=(parseFloat(OB.amt)||0)+totalDR-totalCR;
-  const now=new Date().toLocaleString();
+  const monthEntries = entriesForMonth(currentMonthKey);
+  const allWithBal   = withBalances(monthEntries);
+  const totalDR  = monthEntries.reduce((s,r)=>s+r.debit,0);
+  const totalCR  = monthEntries.reduce((s,r)=>s+r.credit,0);
+  const closing  = (parseFloat(getOB().amt)||0)+totalDR-totalCR;
+  const ob       = getOB();
+  const now      = new Date().toLocaleString();
 
-  const rows=allWithBal.map((r,i)=>`
+  const rows = allWithBal.map((r,i)=>`
     <tr style="background:${i%2===0?'#fff':'#f9f9f9'}">
       <td style="padding:6px 8px;border:1px solid #e0dcd4;white-space:nowrap;font-size:11px">${fmtD(r.date)}</td>
       <td style="padding:6px 8px;border:1px solid #e0dcd4;color:#c94a2a;font-weight:700;font-size:11px">${r.cheque||''}</td>
@@ -500,7 +624,7 @@ function printRegister(){
       <td style="padding:6px 8px;border:1px solid #e0dcd4;text-align:right;font-weight:700;font-size:11px;color:${r.balance<0?'#c94a2a':'#0f1923'}">${fmt(r.balance)}</td>
     </tr>`).join('');
 
-  const w=window.open('','_blank','width=1050,height=780');
+  const w = window.open('','_blank','width=1050,height=780');
   w.document.write(`<!DOCTYPE html><html><head><title>Cash Book</title>
   <style>body{font-family:'Times New Roman',serif;padding:28px 32px;color:#0f1923;}
   h2{font-size:20px;text-align:center;margin-bottom:3px;}
@@ -514,15 +638,15 @@ function printRegister(){
   th{background:#0f1923;color:#fff;padding:8px;font-size:9px;letter-spacing:1px;text-transform:uppercase;text-align:left;border:1px solid #0f1923;}
   th.r{text-align:right;}
   .ob-tr td{background:#fdf6e3;font-weight:bold;}
-  .tot-tr td{background:#f0f0f0;font-weight:bold;font-size:11px;padding:8px 8px;}
-  .sigs{display:flex;gap:40px;margin-top:48px;text-align:center;}
-  .sig{flex:1;border-top:1.5px solid #0f1923;padding-top:5px;font-size:10px;color:#5a7289;text-transform:uppercase;letter-spacing:1px;margin-top:30px;}
+  .tot-tr td{background:#f0f0f0;font-weight:bold;font-size:11px;padding:8px;}
+  .sigs{display:flex;gap:40px;margin-top:48px;}
+  .sig{flex:1;border-top:1.5px solid #0f1923;padding-top:5px;font-size:10px;color:#5a7289;text-transform:uppercase;letter-spacing:1px;margin-top:30px;text-align:center;}
   .foot{text-align:center;font-size:9px;color:#94aab8;margin-top:12px;border-top:1px solid #e0dcd4;padding-top:8px;}
   </style></head><body>
   <h2>${CN}</h2><div class="sub">${CA}</div>
-  <div class="ttl">Cash Book — ${OB.month||'25/26'}</div>
+  <div class="ttl">Cash Book — ${ob.label||currentMonthKey}</div>
   <div class="stats">
-    <div class="sb"><div class="lbl">Opening Balance</div><div class="val" style="color:#c9922a">${fmt(OB.amt||0)}</div></div>
+    <div class="sb"><div class="lbl">Opening Balance</div><div class="val" style="color:#c9922a">${fmt(ob.amt||0)}</div></div>
     <div class="sb"><div class="lbl">Total Debit</div><div class="val" style="color:#2a7a5e">${fmt(totalDR)}</div></div>
     <div class="sb"><div class="lbl">Total Credit</div><div class="val" style="color:#c94a2a">${fmt(totalCR)}</div></div>
     <div class="sb"><div class="lbl">Closing Balance</div><div class="val" style="color:#2a5ac9">${fmt(closing)}</div></div>
@@ -532,13 +656,13 @@ function printRegister(){
     <th class="r">Debit (Rs)</th><th class="r">Credit (Rs)</th><th class="r">Balance (Rs)</th>
   </tr></thead><tbody>
   <tr class="ob-tr">
-    <td style="padding:6px 8px;border:1px solid #e0dcd4;font-size:11px">${fmtD(OB.date)||'—'}</td>
+    <td style="padding:6px 8px;border:1px solid #e0dcd4;font-size:11px">01/${currentMonthKey?currentMonthKey.split('-')[1]:''}/${currentMonthKey?currentMonthKey.split('-')[0]:''}</td>
     <td style="padding:6px 8px;border:1px solid #e0dcd4"></td>
     <td style="padding:6px 8px;border:1px solid #e0dcd4;font-size:11px;color:#c9922a">Opening Balance</td>
     <td style="padding:6px 8px;border:1px solid #e0dcd4"></td>
     <td style="padding:6px 8px;border:1px solid #e0dcd4"></td>
     <td style="padding:6px 8px;border:1px solid #e0dcd4"></td>
-    <td style="padding:6px 8px;border:1px solid #e0dcd4;text-align:right;color:#c9922a;font-weight:bold">${fmt(OB.amt||0)}</td>
+    <td style="padding:6px 8px;border:1px solid #e0dcd4;text-align:right;color:#c9922a;font-weight:bold">${fmt(ob.amt||0)}</td>
   </tr>
   ${rows}
   <tr class="tot-tr">
@@ -553,21 +677,25 @@ function printRegister(){
     <div class="sig">Reviewed by</div>
     <div class="sig">Approved by</div>
   </div>
-  <div class="foot">Printed: ${now} | ${CN} | Cash Book — ${OB.month||'25/26'}</div>
+  <div class="foot">Printed: ${now} | ${CN} | Cash Book — ${ob.label||currentMonthKey}</div>
   </body></html>`);
   w.document.close(); setTimeout(()=>w.print(),400);
 }
 
+// ── Export CSV ───────────────────────────────────────────────────────────────
 function exportCSV(){
-  const allWithBal=withBalances(allEntries);
-  const hdr=['Date','Cheque No','Description','Voucher / Ref','Type','Debit','Credit','Balance'];
-  const obLine=[fmtD(OB.date)||'','','Opening Balance','','OB','','',OB.amt||0];
-  const rows=allWithBal.map(r=>[fmtD(r.date),r.cheque||'',r.desc||'',r.ref||'',r.type,r.debit||'',r.credit||'',r.balance]);
-  const csv=[hdr,obLine,...rows].map(r=>r.map(v=>'"'+String(v).replace(/"/g,'""')+'"').join(',')).join('\n');
-  const a=document.createElement('a');
-  a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'}));
-  a.download='cashbook_'+new Date().toISOString().slice(0,10)+'.csv';
-  a.click(); toast('⬇ CSV exported','var(--sage)');
+  const monthEntries = entriesForMonth(currentMonthKey);
+  const allWithBal   = withBalances(monthEntries);
+  const ob = getOB();
+  const hdr = ['Date','Cheque No','Description','Voucher / Ref','Type','Debit','Credit','Balance'];
+  const obLine = ['01/'+currentMonthKey.split('-')[1]+'/'+currentMonthKey.split('-')[0],'','Opening Balance','','OB','','',ob.amt||0];
+  const rows   = allWithBal.map(r=>[fmtD(r.date),r.cheque||'',r.desc||'',r.ref||'',r.type,r.debit||'',r.credit||'',r.balance]);
+  const csv    = [hdr,obLine,...rows].map(r=>r.map(v=>'"'+String(v).replace(/"/g,'""')+'"').join(',')).join('\n');
+  const a      = document.createElement('a');
+  a.href       = URL.createObjectURL(new Blob([csv],{type:'text/csv'}));
+  a.download   = 'cashbook_'+(ob.label||currentMonthKey).replace(/\s+/g,'_')+'_'+new Date().toISOString().slice(0,10)+'.csv';
+  a.click();
+  toast('⬇ CSV exported','var(--sage)');
 }
 
 loadAll();
