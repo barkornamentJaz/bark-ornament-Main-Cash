@@ -722,17 +722,14 @@ function exportCSV(){
 // ── DEBUG: shows first 5 raw rows from each sheet ───────────────────────────
 async function debugSheets(){
   try{
-    const [reimbs, vouchers] = await Promise.all([fetchSheet('Reimbursement'), fetchSheet('Vouchers')]);
-    const r1 = reimbs.slice(0,3);
-    const v1 = vouchers.slice(0,3);
-    const keys_r = r1.length ? Object.keys(r1[0]) : [];
-    const keys_v = v1.length ? Object.keys(v1[0]) : [];
-    let msg = '=== REIMBURSEMENT columns ===\n' + JSON.stringify(keys_r) + '\n\n';
-    msg += 'First row: ' + JSON.stringify(r1[0]) + '\n\n';
-    msg += '=== VOUCHERS columns ===\n' + JSON.stringify(keys_v) + '\n\n';
-    msg += 'First row: ' + JSON.stringify(v1[0]);
+    const settings = await fetchSheet('Settings');
+    const keys_s = settings.length ? Object.keys(settings[0]) : [];
+    let msg = '=== SETTINGS columns ===\n' + JSON.stringify(keys_s) + '\n\n';
+    msg += 'All rows:\n';
+    settings.forEach((r,i)=>{ msg += 'Row '+(i+1)+': '+JSON.stringify(r)+'\n'; });
+    msg += '\n=== monthlyOB in memory ===\n' + JSON.stringify(monthlyOB,null,2);
     alert(msg);
-  } catch(e){ alert('Error: '+e.message); }
+  } catch(e){ alert('Settings fetch error: '+e.message); }
 }
 
 loadAll();
