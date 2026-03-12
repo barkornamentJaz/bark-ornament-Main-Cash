@@ -460,11 +460,22 @@ async function loadAll(){
         credit: parseFloat(r['Amount (Rs)']||r['Amount'])||0
       }));
 
-    allEntries = [...drRows,...crRows].sort((a,b)=>{
-      const da=parseD(a.date), db=parseD(b.date);
-      if(!da&&!db) return 0; if(!da) return 1; if(!db) return -1;
-      return da-db;
-    });
+    // Normalize dates to timestamps for reliable sorting across all formats
+    const toTs = v => {
+      const d = parseD(v);
+      return d ? d.getTime() : 0;
+    };
+    allEntries = [...drRows,...crRows]
+      .map(r => ({...r, _ts: toTs(r.date)}))
+      .sort((a,b) => {
+        if(!a._ts && !b._ts) return 0;
+        if(!a._ts) return 1;
+        if(!b._ts) return -1;
+        if(a._ts !== b._ts) return a._ts - b._ts;
+        // Same date: DR before CR (cash in before cash out)
+        if(a.type === b.type) return 0;
+        return a.type === 'DR' ? -1 : 1;
+      });
 
     buildMonthDropdown();
     renderTable();
