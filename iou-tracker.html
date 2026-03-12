@@ -252,7 +252,7 @@ tbody td{padding:9px 12px;font-size:12px;color:var(--text);vertical-align:middle
       </div>
 
       <div class="form-actions">
-        <button class="btn btn-primary" onclick="saveIOU()">➕ Save IOU</button>
+        <button class="btn btn-primary" id="saveBtnLbl" onclick="saveIOU()">➕ Save IOU</button>
         <button class="btn btn-outline" onclick="clearForm()">✕ Clear</button>
       </div>
     </div>
@@ -307,6 +307,7 @@ const BASE     = 'https://docs.google.com/spreadsheets/d/' + SHEET_ID + '/gviz/t
 const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxJ9WqxJrZes34GxXFh1aKNWGk7MZcWwmrVJ_CLMJ47UjXSp7Rf7Cs5hukntUQKYZgflQ/exec';
 
 let allData = [];
+let _editIdx = null;  // tracks which allData index is being edited (null = new entry)
 
 // ── Date display ─────────────────────────────────────────
 const D = new Date();
@@ -515,8 +516,11 @@ async function deleteRow(idx){
 
 function editRow(idx){
   const r = allData[idx];
+  _editIdx = idx;  // reliable JS variable — don't trust hidden input
   document.getElementById('editRow').value = idx;
   document.getElementById('formTitle').textContent = '✏️ Edit IOU';
+  const sb = document.getElementById('saveBtnLbl');
+  if(sb) sb.textContent = '💾 Update IOU';
   // Parse date back to YYYY-MM-DD for input
   function gvizToInput(v){
     if(!v) return '';
@@ -543,8 +547,11 @@ function editRow(idx){
 
 // ── Clear Form ────────────────────────────────────────────
 function clearForm(){
+  _editIdx = null;  // reset edit mode
   document.getElementById('editRow').value = '';
   document.getElementById('formTitle').textContent = '➕ New IOU Entry';
+  const sb = document.getElementById('saveBtnLbl');
+  if(sb) sb.textContent = '➕ Save IOU';
   ['fDate','fIouNo','fBorrower','fDescription','fAmount','fExpected','fSettled','fNotes'].forEach(id => {
     document.getElementById(id).value = '';
   });
@@ -589,9 +596,13 @@ async function saveIOU(){
     'Notes':          notes
   };
 
-  const editIdx = document.getElementById('editRow').value;
-  const payload = editIdx !== ''
-    ? {action:'update', sheet:'IOU', row:parseInt(editIdx)+2, data:data}
+  // _editIdx is the index in reversed allData.
+  // Since allData = sheetRows.reverse(), allData[0] = last sheet row.
+  // Sheet row for allData[i] = (allData.length - i) + 1  (1-based, +1 for header)
+  const isEditing = _editIdx !== null && _editIdx !== undefined;
+  const sheetRow  = isEditing ? (allData.length - _editIdx + 1) : null;
+  const payload   = isEditing
+    ? {action:'update', sheet:'IOU', row: sheetRow, data:data}
     : {action:'append', sheet:'IOU', data:data};
 
   try{
@@ -620,9 +631,15 @@ async function saveIOU(){
     // Clean up after submit
     setTimeout(() => { form.remove(); iframe.remove(); }, 3000);
 
-    showToast(editIdx!==''?'✅ IOU updated! Refreshing…':'✅ IOU saved! Refreshing…','var(--green)');
+    // Optimistic local update so the user sees the change immediately
+    if(isEditing){
+      allData[_editIdx] = {...allData[_editIdx], ...data};
+      renderTable();
+      updateSummary();
+    }
+    showToast(isEditing?'✅ IOU updated! Refreshing…':'✅ IOU saved! Refreshing…','var(--green)');
     clearForm();
-    setTimeout(loadData, 2000);
+    setTimeout(loadData, 2500);
   }catch(e){
     showToast('⚠️ Save failed: '+e.message,'var(--red)');
   }
