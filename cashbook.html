@@ -447,10 +447,10 @@ async function loadAll(){
     const [reimbs, vouchers] = await Promise.all([fetchSheet('Reimbursement'), fetchSheet('Vouchers')]);
 
     const drRows = reimbs
-      .filter(r=>(r['amount']||r['Amount'])&&(r['date']||r['Date']||r['Description']))
+      .filter(r=>(r['amount']||r['Amount'])&&(r['']||r['Description']))
       .map(r=>({
         type:'DR',
-        date: r['Date']||r['date']||r['']||r[''],
+        date: r[''],          // first column (empty header) = date in Reimbursement sheet
         cheque: r['Reference']||'',
         desc: r['Description']||'Cash Reimbursement',
         ref: r['Reference']||'',
@@ -459,10 +459,10 @@ async function loadAll(){
       }));
 
     const crRows = vouchers
-      .filter(r=>(r['Amount (Rs)']||r['Amount'])&&(r['Date']||r['Payee Name']||r['Payee']))
+      .filter(r=>(r['Amount (Rs)']||r['Amount'])&&(r['Date']||r['Payee Name']))
       .map(r=>({
         type:'CR',
-        date: r['Date']||r['date']||r['']||r[''],
+        date: r['Date'],      // Vouchers sheet date column is 'Date'
         cheque: '',
         desc: r['Description']||(r['Payee Name']||r['Payee']?'Payment — '+(r['Payee Name']||r['Payee']):'Voucher Payment'),
         ref: r['Voucher No']||'',
