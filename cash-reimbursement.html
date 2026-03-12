@@ -1,0 +1,512 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Cash Reimbursement — Bark Ornament</title>
+<link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&family=Barlow+Condensed:wght@600;700;800&display=swap" rel="stylesheet"/>
+<style>
+  :root{
+    --primary:#1e3a5f;--primary-light:#264d7a;
+    --accent:#e8820c;--white:#ffffff;--bg:#f0f4f8;--card:#ffffff;--border:#dde3ec;
+    --text:#1a2636;--text2:#4a5e78;--text3:#8a9bb0;
+    --green:#0e9f6e;--green-bg:#ecfdf5;
+    --red:#e02424;--red-bg:#fef2f2;
+    --blue:#1a56db;--blue-bg:#ebf5ff;
+    --amber:#c27803;--amber-bg:#fef3c7;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  body{background:var(--bg);color:var(--text);font-family:'Barlow',sans-serif;font-size:14px;min-height:100vh;}
+  nav{background:var(--primary);display:flex;align-items:center;padding:0 24px;height:56px;position:sticky;top:0;z-index:100;box-shadow:0 2px 12px rgba(30,58,95,.18);gap:4px;}
+  .nav-brand{display:flex;align-items:center;gap:11px;margin-right:18px;}
+  .nav-logo-img{width:36px;height:36px;border-radius:8px;object-fit:cover;border:2px solid rgba(255,255,255,.25);}
+  .nav-title .t1{font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:14px;color:#fff;line-height:1.15;}
+  .nav-title .t2{font-size:9px;color:rgba(255,255,255,.5);letter-spacing:1.8px;text-transform:uppercase;}
+  .nav-links{display:flex;gap:2px;flex:1;}
+  .nav-links a{padding:5px 12px;border-radius:6px;text-decoration:none;color:rgba(255,255,255,.65);font-size:12px;font-weight:500;display:flex;align-items:center;gap:5px;transition:all .18s;white-space:nowrap;}
+  .nav-links a:hover{background:rgba(255,255,255,.1);color:#fff;}
+  .nav-links a.active{background:var(--accent);color:#fff;font-weight:700;}
+  .nav-right{display:flex;align-items:center;gap:10px;margin-left:auto;}
+  .nav-date{background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.15);border-radius:6px;padding:4px 12px;font-size:12px;font-weight:600;color:#fff;}
+  .nav-dot{width:8px;height:8px;border-radius:50%;background:#0e9f6e;box-shadow:0 0 6px #0e9f6e;}
+  main{padding:24px;max-width:1400px;margin:0 auto;}
+  .page-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:22px;padding-bottom:18px;border-bottom:1.5px solid var(--border);}
+  .page-header h1{font-family:'Barlow Condensed',sans-serif;font-size:25px;font-weight:800;color:var(--primary);}
+  .page-header p{font-size:13px;color:var(--text3);margin-top:2px;}
+  .header-actions{display:flex;gap:8px;}
+  .btn{padding:8px 16px;border-radius:7px;border:none;cursor:pointer;font-size:12px;font-weight:600;display:flex;align-items:center;gap:6px;transition:all .18s;font-family:'Barlow',sans-serif;}
+  .btn-outline{background:#fff;border:1.5px solid var(--border);color:var(--text2);}
+  .btn-outline:hover{border-color:var(--primary);color:var(--primary);}
+  .btn-primary{background:var(--primary);color:#fff;}
+  .btn-primary:hover{background:var(--primary-light);}
+  .btn-green{background:var(--green);color:#fff;}
+  .btn-green:hover{background:#057a55;}
+  .summary-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:22px;}
+  .summary-card{background:var(--card);border-radius:12px;border:1.5px solid var(--border);padding:18px 18px 15px;position:relative;overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,.05);}
+  .card-stripe{position:absolute;top:0;left:0;right:0;height:4px;border-radius:12px 12px 0 0;}
+  .s-green .card-stripe{background:linear-gradient(90deg,#0e9f6e,#31c48d);}
+  .s-blue  .card-stripe{background:linear-gradient(90deg,#1a56db,#3f83f8);}
+  .s-amber .card-stripe{background:linear-gradient(90deg,#c27803,#f59e0b);}
+  .card-top{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:10px;}
+  .card-label{font-size:10px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:var(--text3);}
+  .card-icon-box{width:34px;height:34px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:16px;}
+  .s-green .card-icon-box{background:var(--green-bg);}
+  .s-blue  .card-icon-box{background:var(--blue-bg);}
+  .s-amber .card-icon-box{background:var(--amber-bg);}
+  .card-amount{font-family:'Barlow Condensed',sans-serif;font-size:21px;font-weight:800;line-height:1;margin-bottom:5px;}
+  .s-green .card-amount{color:var(--green);}
+  .s-blue  .card-amount{color:var(--blue);}
+  .s-amber .card-amount{color:var(--amber);}
+  .card-sub{font-size:10px;color:var(--text3);}
+  .form-card{background:var(--card);border-radius:12px;border:1.5px solid var(--border);padding:20px 22px;margin-bottom:20px;box-shadow:0 1px 4px rgba(0,0,0,.05);}
+  .form-card-title{font-size:13px;font-weight:700;color:var(--primary);margin-bottom:16px;display:flex;align-items:center;gap:7px;}
+  .form-grid{display:grid;grid-template-columns:1fr 1fr 1fr 1fr 1fr auto;gap:12px;align-items:end;}
+  .form-group{display:flex;flex-direction:column;gap:5px;}
+  .form-group label{font-size:11px;font-weight:600;color:var(--text2);letter-spacing:.4px;text-transform:uppercase;}
+  .form-group input,.form-group select{padding:8px 11px;border-radius:7px;border:1.5px solid var(--border);font-size:13px;font-family:'Barlow',sans-serif;color:var(--text);background:#fff;transition:border .18s;outline:none;}
+  .form-group input:focus{border-color:var(--primary);}
+  .filters-bar{display:flex;gap:10px;align-items:center;margin-bottom:14px;flex-wrap:wrap;}
+  .filter-input{padding:7px 11px;border-radius:7px;border:1.5px solid var(--border);font-size:12px;font-family:'Barlow',sans-serif;color:var(--text);background:#fff;outline:none;transition:border .18s;}
+  .filter-input:focus{border-color:var(--primary);}
+  .filter-label{font-size:11px;font-weight:600;color:var(--text3);white-space:nowrap;}
+  .table-card{background:var(--card);border-radius:12px;border:1.5px solid var(--border);overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,.05);}
+  .table-card-header{padding:13px 18px;display:flex;align-items:center;justify-content:space-between;border-bottom:1.5px solid var(--border);background:#f8fafc;}
+  .table-card-title{font-size:13px;font-weight:700;display:flex;align-items:center;gap:7px;color:var(--primary);}
+  table{width:100%;border-collapse:collapse;}
+  thead th{background:#f8fafc;padding:9px 14px;font-size:10px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:var(--text3);text-align:left;border-bottom:1.5px solid var(--border);}
+  tbody tr{border-bottom:1px solid #f0f4f8;transition:background .12s;}
+  tbody tr:last-child{border-bottom:none;}
+  tbody tr:hover{background:#f8fafc;}
+  tbody td{padding:10px 14px;font-size:12px;color:var(--text);vertical-align:middle;}
+  .amount-green{color:var(--green);font-weight:700;}
+  .loading-row td{text-align:center;color:var(--text3);padding:28px !important;font-size:13px;}
+  .act-btn{padding:4px 10px;border-radius:5px;border:none;cursor:pointer;font-size:11px;font-weight:600;transition:all .18s;}
+  .act-print{background:var(--blue-bg);color:var(--blue);}
+  .act-print:hover{background:var(--blue);color:#fff;}
+  .modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:200;align-items:center;justify-content:center;}
+  .modal-overlay.show{display:flex;}
+  .modal{background:#fff;border-radius:14px;padding:28px;width:420px;box-shadow:0 8px 40px rgba(0,0,0,.15);}
+  .modal h2{font-family:'Barlow Condensed',sans-serif;font-size:18px;font-weight:800;color:var(--primary);margin-bottom:16px;}
+  .modal-receipt{border:1.5px solid var(--border);border-radius:8px;padding:18px;margin-bottom:16px;}
+  .receipt-header{text-align:center;margin-bottom:14px;border-bottom:1px solid var(--border);padding-bottom:12px;}
+  .receipt-header h3{font-family:'Barlow Condensed',sans-serif;font-size:15px;font-weight:800;color:var(--primary);}
+  .receipt-header p{font-size:11px;color:var(--text3);}
+  .receipt-amount{font-family:'Barlow Condensed',sans-serif;font-size:24px;font-weight:800;color:var(--green);text-align:center;padding:10px 0;}
+  .receipt-row{display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px dotted #eee;font-size:12px;}
+  .receipt-row:last-child{border-bottom:none;}
+  .receipt-label{color:var(--text3);}
+  .receipt-value{font-weight:600;}
+  .modal-actions{display:flex;gap:8px;justify-content:flex-end;}
+  .toast{position:fixed;bottom:22px;right:22px;z-index:999;background:var(--primary);color:#fff;padding:10px 18px;border-radius:8px;font-weight:600;font-size:12px;display:none;align-items:center;gap:8px;box-shadow:0 4px 20px rgba(30,58,95,.3);}
+  .toast.show{display:flex;animation:fadeIn .3s;}
+  @keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+  @media print{nav,.form-card,.filters-bar,.header-actions,.act-btn,.modal-overlay{display:none!important;}body{background:#fff;}}
+</style>
+</head>
+<body>
+<nav>
+  <div class="nav-brand">
+    <div class="nav-title">
+      <div class="t1">Bark Ornament</div>
+      <div class="t2">Cash Management</div>
+    </div>
+  </div>
+  <div class="nav-links">
+    <a href="index.html">📊 Dashboard</a>
+    <a href="cashbook.html">📒 Cash Book</a>
+    <a href="cash-reimbursement.html" class="active">💵 Cash Reimbursement</a>
+    <a href="iou-tracker.html">🤝 IOU Tracker</a>
+    <a href="cash-count.html">🧮 Cash Count</a>
+    <a href="vouchers.html">🧾 Vouchers</a>
+  </div>
+  <div class="nav-right">
+    <div class="nav-date" id="navDate">—</div>
+    <div class="nav-dot"></div>
+  </div>
+</nav>
+
+<main>
+  <div class="page-header">
+    <div>
+      <h1>💵 Cash Reimbursement</h1>
+      <p>Track cash received — by person, date &amp; reference</p>
+    </div>
+    <div class="header-actions">
+      <button class="btn btn-outline" onclick="loadData()">🔄 Refresh</button>
+      <button class="btn btn-primary" onclick="printSummary()">🖨️ Print Summary</button>
+    </div>
+  </div>
+
+  <div class="summary-grid">
+    <div class="summary-card s-green">
+      <div class="card-stripe"></div>
+      <div class="card-top"><div class="card-label">Total Received</div><div class="card-icon-box">💰</div></div>
+      <div class="card-amount" id="totalReceived">—</div>
+      <div class="card-sub">All reimbursements total</div>
+    </div>
+    <div class="summary-card s-blue">
+      <div class="card-stripe"></div>
+      <div class="card-top"><div class="card-label">This Month</div><div class="card-icon-box">📅</div></div>
+      <div class="card-amount" id="monthTotal">—</div>
+      <div class="card-sub" id="monthName">Current month</div>
+    </div>
+    <div class="summary-card s-amber">
+      <div class="card-stripe"></div>
+      <div class="card-top"><div class="card-label">Total Entries</div><div class="card-icon-box">📋</div></div>
+      <div class="card-amount" id="totalEntries">—</div>
+      <div class="card-sub">Number of records</div>
+    </div>
+  </div>
+
+  <div class="form-card">
+    <div class="form-card-title">➕ Add New Reimbursement</div>
+    <div class="form-grid">
+      <div class="form-group"><label>Date</label><input type="date" id="inDate"/></div>
+      <div class="form-group"><label>Received From</label><input type="text" id="inName" placeholder="Person name"/></div>
+      <div class="form-group"><label>Description</label><input type="text" id="inDesc" placeholder="Purpose / details"/></div>
+      <div class="form-group"><label>Amount (Rs)</label><input type="number" id="inAmount" placeholder="0.00" min="0" step="0.01"/></div>
+      <div class="form-group"><label>Reference</label><input type="text" id="inRef" placeholder="Receipt / ref no."/></div>
+      <div class="form-group"><label>&nbsp;</label><button class="btn btn-green" onclick="addEntry()">➕ Add</button></div>
+    </div>
+  </div>
+
+  <div class="filters-bar">
+    <span class="filter-label">🔍 Search:</span>
+    <input class="filter-input" id="searchInput" placeholder="Name or description…" oninput="renderTable()" style="width:200px"/>
+    <span class="filter-label">📅 From:</span>
+    <input class="filter-input" type="date" id="filterFrom" onchange="renderTable()"/>
+    <span class="filter-label">To:</span>
+    <input class="filter-input" type="date" id="filterTo" onchange="renderTable()"/>
+    <button class="btn btn-outline" onclick="clearFilters()">✕ Clear</button>
+    <span style="margin-left:auto;font-size:12px;color:var(--text3)" id="rowCount"></span>
+  </div>
+
+  <div class="table-card">
+    <div class="table-card-header">
+      <div class="table-card-title">📋 Reimbursement Records <span id="recordBadge" style="background:var(--blue-bg);color:var(--blue);padding:2px 8px;border-radius:4px;font-size:11px;margin-left:6px"></span></div>
+      <button class="btn btn-outline" onclick="printSummary()">🖨️ Print All</button>
+    </div>
+    <table>
+      <thead>
+        <tr><th>#</th><th>Date</th><th>Received From</th><th>Description</th><th>Amount</th><th>Reference</th><th>Action</th></tr>
+      </thead>
+      <tbody id="tableBody">
+        <tr class="loading-row"><td colspan="7">Loading…</td></tr>
+      </tbody>
+    </table>
+  </div>
+</main>
+
+<div class="modal-overlay" id="printModal">
+  <div class="modal">
+    <h2>🖨️ Print Receipt</h2>
+    <div class="modal-receipt" id="receiptContent"></div>
+    <div class="modal-actions">
+      <button class="btn btn-outline" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="doPrint()">🖨️ Print</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ── Config ────────────────────────────────────────────────────
+const SHEET_ID = '1q6CwhfaCfzvq8SdS1MVxFBhYh2L1VHWMWJj_L1Ia_bc';
+const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbx2B8x1totWyOGU8PyM6r3lNFBA_eiRdXu2egrWRSPsEnkI1Tq_6-8dxL4GbM4MmMlM1A/exec';
+const BASE = 'https://docs.google.com/spreadsheets/d/' + SHEET_ID + '/gviz/tq?tqx=out:json&sheet=';
+
+// Your actual sheet columns (row 1 headers):
+// A=date  B=type  C=category  D=Description  E=amount  F=Reference
+
+let allData = [];
+let currentReceipt = null;
+
+// ── Init ──────────────────────────────────────────────────────
+const D = new Date();
+const DAYS = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+document.getElementById('navDate').textContent = DAYS[D.getDay()] + ', ' + MONTHS[D.getMonth()] + ' ' + D.getDate() + ', ' + D.getFullYear();
+document.getElementById('inDate').value = D.toISOString().split('T')[0];
+document.getElementById('monthName').textContent = MONTHS[D.getMonth()] + ' ' + D.getFullYear();
+
+// ── Helpers ───────────────────────────────────────────────────
+function fmt(n) {
+  const x = parseFloat(n);
+  return isNaN(x) ? '—' : 'Rs ' + x.toLocaleString('en-LK', {minimumFractionDigits:2, maximumFractionDigits:2});
+}
+
+function fmtDate(v) {
+  if (!v) return '—';
+  // Google Sheets gviz returns dates as "Date(2026,1,3)" (month is 0-indexed)
+  if (typeof v === 'string' && v.startsWith('Date(')) {
+    const p = v.replace('Date(','').replace(')','').split(',');
+    const d = new Date(+p[0], +p[1], +p[2]);
+    return String(d.getDate()).padStart(2,'0') + '/' + String(d.getMonth()+1).padStart(2,'0') + '/' + d.getFullYear();
+  }
+  // Already a string date like "2026-03-12"
+  if (typeof v === 'string' && v.includes('-')) {
+    const p = v.split('-');
+    return p[2] + '/' + p[1] + '/' + p[0];
+  }
+  return v;
+}
+
+function parseDate(v) {
+  if (!v) return null;
+  if (typeof v === 'string' && v.startsWith('Date(')) {
+    const p = v.replace('Date(','').replace(')','').split(',');
+    return new Date(+p[0], +p[1], +p[2]);
+  }
+  if (typeof v === 'string' && v.includes('-')) return new Date(v);
+  if (typeof v === 'string' && v.includes('/')) {
+    const p = v.split('/');
+    // dd/mm/yyyy
+    return new Date(+p[2], +p[1]-1, +p[0]);
+  }
+  return new Date(v);
+}
+
+function showToast(msg, color) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.style.background = color || 'var(--primary)';
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 3200);
+}
+
+// ── Load from Google Sheet ────────────────────────────────────
+async function loadData() {
+  document.getElementById('tableBody').innerHTML = '<tr class="loading-row"><td colspan="7">Loading…</td></tr>';
+  try {
+    const res = await fetch(BASE + encodeURIComponent('Reimbursement'));
+    const raw = await res.text();
+    const j = JSON.parse(raw.substring(47).slice(0,-2));
+    // Column A header is blank in your sheet — force it to 'date'
+    const cols = j.table.cols.map((c, i) => c.label || (i === 0 ? 'date' : 'col'+i));
+    // Keep ALL rows that have any non-empty cell
+    allData = j.table.rows
+      .filter(r => r.c && r.c.some(cell => cell && cell.v !== null && cell.v !== ''))
+      .map(r => {
+        const obj = {};
+        cols.forEach((c, i) => { obj[c] = (r.c[i] && r.c[i].v !== null) ? r.c[i].v : ''; });
+        return obj;
+      })
+      .reverse(); // newest first
+    renderTable();
+    updateSummary();
+  } catch(e) {
+    document.getElementById('tableBody').innerHTML = '<tr class="loading-row"><td colspan="7">⚠️ Error loading data. Make sure the sheet is set to public.</td></tr>';
+    showToast('⚠️ Failed to load data', 'var(--red)');
+  }
+}
+
+// ── Summary ───────────────────────────────────────────────────
+function updateSummary() {
+  const getAmt = r => parseFloat(r['amount'] || r['Amount'] || 0);
+  const getDate = r => parseDate(r['date'] || r['Date']);
+  const total = allData.reduce((s,r) => s + getAmt(r), 0);
+  const now = new Date();
+  const monthData = allData.filter(r => {
+    const d = getDate(r);
+    return d && d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+  });
+  const monthTotal = monthData.reduce((s,r) => s + getAmt(r), 0);
+  document.getElementById('totalReceived').textContent = fmt(total);
+  document.getElementById('monthTotal').textContent = fmt(monthTotal);
+  document.getElementById('totalEntries').textContent = allData.length;
+}
+
+// ── Render Table ──────────────────────────────────────────────
+function renderTable() {
+  const search = (document.getElementById('searchInput').value || '').toLowerCase();
+  const from = document.getElementById('filterFrom').value;
+  const to = document.getElementById('filterTo').value;
+
+  let filtered = allData.filter(r => {
+    // Search across description and category fields
+    const desc = (r['Description'] || r['category'] || '').toLowerCase();
+    if (search && !desc.includes(search)) return false;
+    if (from || to) {
+      const d = parseDate(r['date'] || r['Date']);
+      if (!d) return false;
+      if (from && d < new Date(from)) return false;
+      if (to && d > new Date(to + 'T23:59:59')) return false;
+    }
+    return true;
+  });
+
+  document.getElementById('rowCount').textContent = filtered.length + ' records';
+  document.getElementById('recordBadge').textContent = filtered.length;
+
+  if (!filtered.length) {
+    document.getElementById('tableBody').innerHTML = '<tr class="loading-row"><td colspan="7">No records found</td></tr>';
+    window._filtered = filtered;
+    return;
+  }
+
+  document.getElementById('tableBody').innerHTML = filtered.map((r, i) => `
+    <tr>
+      <td style="color:var(--text3);font-weight:600">${i+1}</td>
+      <td style="white-space:nowrap">${fmtDate(r['date'] || r['Date'])}</td>
+      <td style="font-weight:600">${(()=>{const d=r['Description']||'';const p=d.split(' — ');return p.length>1?p[0]:d;})()||'—'}</td>
+      <td style="color:var(--text2);max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${r['Description']||''}">${(()=>{const d=r['Description']||'';const p=d.split(' — ');return p.length>1?p.slice(1).join(' — '):'';})()||'—'}</td>
+      <td class="amount-green">${fmt(r['amount'] || r['Amount'])}</td>
+      <td style="color:var(--text3);font-size:11px">${r['Reference'] || '—'}</td>
+      <td><button class="act-btn act-print" onclick="openReceipt(${i})">🖨️ Receipt</button></td>
+    </tr>
+  `).join('');
+  window._filtered = filtered;
+}
+
+function clearFilters() {
+  document.getElementById('searchInput').value = '';
+  document.getElementById('filterFrom').value = '';
+  document.getElementById('filterTo').value = '';
+  renderTable();
+}
+
+// ── Add Entry ─────────────────────────────────────────────────
+async function addEntry() {
+  const date = document.getElementById('inDate').value;
+  const name = document.getElementById('inName').value.trim();
+  const desc = document.getElementById('inDesc').value.trim();
+  const amount = document.getElementById('inAmount').value;
+  const ref = document.getElementById('inRef').value.trim();
+
+  if (!date || !name || !amount) {
+    showToast('⚠️ Date, Received From & Amount are required', 'var(--amber)');
+    return;
+  }
+
+  // Build entry matching your sheet columns: date | type | category | Description | amount | Reference
+  const entry = {
+    'date': date,
+    'type': 'CR',
+    'category': 'Cash Reimbursement',
+    'Description': name + (desc ? ' — ' + desc : ''),
+    'amount': parseFloat(amount) || 0,
+    'Reference': ref
+  };
+
+  // Optimistically update UI
+  allData.unshift(entry);
+  renderTable();
+  updateSummary();
+
+  // Clear inputs
+  document.getElementById('inName').value = '';
+  document.getElementById('inDesc').value = '';
+  document.getElementById('inAmount').value = '';
+  document.getElementById('inRef').value = '';
+
+  // Save to Google Sheets
+  try {
+    showToast('💾 Saving to Google Sheets…', 'var(--blue)');
+    await fetch(SCRIPT_URL, {
+      method: 'POST',
+      mode: 'no-cors',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: 'payload=' + encodeURIComponent(JSON.stringify({
+        action: 'append',
+        sheet: 'Reimbursement',
+        data: entry
+      }))
+    });
+    showToast('✅ Entry saved to Google Sheets!', 'var(--green)');
+  } catch(e) {
+    showToast('⚠️ Added to view only. Sheet save failed.', 'var(--amber)');
+  }
+}
+
+// ── Receipt Modal ─────────────────────────────────────────────
+function openReceipt(i) {
+  const r = (window._filtered || allData)[i];
+  currentReceipt = r;
+  document.getElementById('receiptContent').innerHTML = `
+    <div class="receipt-header">
+      <h3>Bark Ornament (Pvt) Ltd</h3>
+      <p>Cash Reimbursement Receipt</p>
+    </div>
+    <div class="receipt-amount">${fmt(r['amount'] || r['Amount'])}</div>
+    <div class="receipt-row"><span class="receipt-label">Date</span><span class="receipt-value">${fmtDate(r['date'] || r['Date'])}</span></div>
+    <div class="receipt-row"><span class="receipt-label">Received From</span><span class="receipt-value">${(()=>{const d=r['Description']||'';const p=d.split(' — ');return p.length>1?p[0]:d;})()}</span></div>
+    <div class="receipt-row"><span class="receipt-label">Description</span><span class="receipt-value">${(()=>{const d=r['Description']||'';const p=d.split(' — ');return p.length>1?p.slice(1).join(' — '):d;})()}</span></div>
+    <div class="receipt-row"><span class="receipt-label">Reference</span><span class="receipt-value">${r['Reference'] || '—'}</span></div>
+    <div style="text-align:center;margin-top:12px;font-size:10px;color:var(--text3)">Printed: ${new Date().toLocaleString()}</div>
+  `;
+  document.getElementById('printModal').classList.add('show');
+}
+
+function closeModal() { document.getElementById('printModal').classList.remove('show'); }
+
+function doPrint() {
+  const r = currentReceipt;
+  const w = window.open('', '_blank', 'width=420,height=540');
+  w.document.write(`<html><head><title>Receipt</title><style>
+    body{font-family:Arial,sans-serif;padding:24px;font-size:13px;color:#1a2636}
+    h3{font-size:16px;font-weight:800;color:#1e3a5f}
+    .amount{font-size:28px;font-weight:800;color:#0e9f6e;text-align:center;padding:12px 0}
+    .row{display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px dotted #eee;font-size:12px}
+    .label{color:#8a9bb0}
+    .hdr{text-align:center;border-bottom:2px solid #dde3ec;margin-bottom:12px;padding-bottom:10px}
+    .footer{text-align:center;font-size:10px;color:#8a9bb0;margin-top:14px}
+  </style></head><body>`);
+  w.document.write(`<div class="hdr"><h3>Bark Ornament (Pvt) Ltd</h3><p style="font-size:11px;color:#8a9bb0">Cash Reimbursement Receipt</p></div>`);
+  w.document.write(`<div class="amount">${fmt(r['amount'] || r['Amount'])}</div>`);
+  w.document.write(`<div class="row"><span class="label">Date</span><span>${fmtDate(r['date'] || r['Date'])}</span></div>`);
+  const _d = r['Description']||''; const _p = _d.split(' — ');
+  w.document.write(`<div class="row"><span class="label">Received From</span><b>${_p.length>1?_p[0]:_d}</b></div>`);
+  w.document.write(`<div class="row"><span class="label">Description</span><span>${_p.length>1?_p.slice(1).join(' — '):_d}</span></div>`);
+  w.document.write(`<div class="row"><span class="label">Reference</span><span>${r['Reference'] || '—'}</span></div>`);
+  w.document.write(`<div class="footer">Printed: ${new Date().toLocaleString()}</div>`);
+  w.document.write(`</body></html>`);
+  w.document.close();
+  w.print();
+}
+
+// ── Print Summary ─────────────────────────────────────────────
+function printSummary() {
+  const data = window._filtered || allData;
+  if (!data.length) { showToast('⚠️ No data to print', 'var(--amber)'); return; }
+  const total = data.reduce((s,r) => s + parseFloat(r['amount'] || r['Amount'] || 0), 0);
+  const w = window.open('', '_blank', 'width=900,height=650');
+  w.document.write(`<html><head><title>Reimbursement Summary</title><style>
+    body{font-family:Arial,sans-serif;padding:28px;font-size:12px;color:#1a2636}
+    h2{font-size:20px;font-weight:800;color:#1e3a5f}
+    p{color:#8a9bb0;font-size:11px;margin-top:4px}
+    table{width:100%;border-collapse:collapse;margin-top:18px}
+    th{background:#f0f4f8;padding:9px 12px;font-size:10px;font-weight:700;text-transform:uppercase;color:#8a9bb0;border-bottom:2px solid #dde3ec;text-align:left}
+    td{padding:8px 12px;border-bottom:1px solid #f0f4f8;font-size:12px}
+    tr:last-child td{border-bottom:none}
+    .total-row td{background:#f0f4f8;font-weight:700}
+    .amt{color:#0e9f6e;font-weight:700}
+    .hdr{margin-bottom:16px;border-bottom:2px solid #dde3ec;padding-bottom:12px}
+    @media print{body{padding:12px}}
+  </style></head><body>`);
+  w.document.write(`<div class="hdr"><h2>Bark Ornament (Pvt) Ltd</h2><p>Cash Reimbursement Summary — Printed: ${new Date().toLocaleString()} | Total records: ${data.length}</p></div>`);
+  w.document.write(`<table><thead><tr><th>#</th><th>Date</th><th>Received From</th><th>Description</th><th>Amount (Rs)</th><th>Reference</th></tr></thead><tbody>`);
+  data.forEach((r,i) => {
+    const _d = r['Description']||''; const _p = _d.split(' — ');
+    const _from = _p.length>1 ? _p[0] : _d;
+    const _desc = _p.length>1 ? _p.slice(1).join(' — ') : _d;
+    w.document.write(`<tr>
+      <td>${i+1}</td>
+      <td>${fmtDate(r['date'] || r['Date'])}</td>
+      <td>${_from}</td>
+      <td>${_desc}</td>
+      <td class="amt">${fmt(r['amount'] || r['Amount'])}</td>
+      <td>${r['Reference'] || '—'}</td>
+    </tr>`);
+  });
+  w.document.write(`<tr class="total-row"><td colspan="4" style="text-align:right;padding-right:16px">GRAND TOTAL</td><td class="amt">${fmt(total)}</td><td></td></tr>`);
+  w.document.write(`</tbody></table></body></html>`);
+  w.document.close();
+  w.print();
+}
+
+// ── Start ─────────────────────────────────────────────────────
+loadData();
+</script>
+</body>
+</html>

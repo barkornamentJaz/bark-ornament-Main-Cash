@@ -1,0 +1,532 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>Cash Book — Bark Ornament</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=DM+Serif+Display&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet"/>
+<style>
+:root{
+  --ink:#0f1923;--ink2:#2d3f50;--ink3:#5a7289;--ink4:#94aab8;
+  --paper:#f7f5f0;--white:#ffffff;
+  --gold:#c9922a;--gold2:#e8b84b;--gold-bg:#fdf6e3;
+  --rust:#c94a2a;--rust-bg:#fdf0ed;
+  --sage:#2a7a5e;--sage-bg:#edf7f3;
+  --sky:#2a5ac9;--sky-bg:#edf3fd;
+  --border:#e0dcd4;--border2:#cdc8be;
+  --accent:#e8820c;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{background:var(--paper);color:var(--ink);font-family:'DM Sans',sans-serif;font-size:14px;min-height:100vh;}
+
+nav{background:var(--ink);display:flex;align-items:center;padding:0 28px;height:58px;position:sticky;top:0;z-index:200;gap:4px;}
+.nav-brand{display:flex;align-items:center;gap:10px;margin-right:22px;}
+.nav-title .t1{font-family:'DM Serif Display',serif;font-size:15px;color:#fff;line-height:1.1;}
+.nav-title .t2{font-size:9px;color:rgba(255,255,255,.35);letter-spacing:2px;text-transform:uppercase;font-family:'Space Mono',monospace;}
+.nav-links{display:flex;gap:2px;flex:1;}
+.nav-links a{padding:5px 11px;border-radius:5px;text-decoration:none;color:rgba(255,255,255,.5);font-size:11.5px;font-weight:500;display:flex;align-items:center;gap:5px;transition:all .15s;white-space:nowrap;}
+.nav-links a:hover{background:rgba(255,255,255,.08);color:rgba(255,255,255,.85);}
+.nav-links a.active{background:var(--accent);color:#fff;font-weight:600;}
+.nav-right{display:flex;align-items:center;gap:10px;margin-left:auto;}
+.nav-date{font-family:'Space Mono',monospace;font-size:11px;color:rgba(255,255,255,.4);letter-spacing:.5px;}
+.nav-dot{width:7px;height:7px;border-radius:50%;background:#0e9f6e;box-shadow:0 0 8px #0e9f6e99;}
+
+.page-hero{background:var(--ink);padding:28px 36px 32px;position:relative;overflow:hidden;}
+.page-hero::before{content:'';position:absolute;top:-40px;right:-40px;width:260px;height:260px;border-radius:50%;background:radial-gradient(circle,rgba(42,122,94,.15),transparent 70%);}
+.page-hero::after{content:'CASH BOOK';position:absolute;bottom:-14px;right:28px;font-family:'DM Serif Display',serif;font-size:80px;color:rgba(255,255,255,.03);line-height:1;pointer-events:none;user-select:none;}
+.hero-inner{max-width:1460px;margin:0 auto;display:flex;align-items:flex-end;justify-content:space-between;}
+.hero-left h1{font-family:'DM Serif Display',serif;font-size:34px;color:#fff;line-height:1.1;margin-bottom:6px;}
+.hero-left p{font-size:12.5px;color:rgba(255,255,255,.4);font-family:'Space Mono',monospace;letter-spacing:.3px;}
+.hero-actions{display:flex;gap:8px;align-items:center;}
+
+.btn{padding:8px 16px;border-radius:6px;border:none;cursor:pointer;font-size:12px;font-weight:600;display:inline-flex;align-items:center;gap:6px;transition:all .15s;font-family:'DM Sans',sans-serif;white-space:nowrap;letter-spacing:.2px;}
+.btn-ghost{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);color:rgba(255,255,255,.7);}
+.btn-ghost:hover{background:rgba(255,255,255,.12);color:#fff;}
+.btn-gold{background:var(--gold);color:#fff;}
+.btn-gold:hover{background:var(--gold2);color:var(--ink);}
+.btn-paper{background:var(--white);border:1.5px solid var(--border);color:var(--ink2);}
+.btn-paper:hover{border-color:var(--ink);}
+.btn-sage{background:var(--sage);color:#fff;}
+.btn-sage:hover{filter:brightness(1.1);}
+
+.stats-row{max-width:1460px;margin:0 auto;padding:20px 36px 0;display:grid;grid-template-columns:repeat(4,1fr);gap:16px;}
+.stat{background:var(--white);border:1.5px solid var(--border);border-radius:10px;padding:16px 20px;display:flex;align-items:center;gap:14px;transition:box-shadow .15s;}
+.stat:hover{box-shadow:0 4px 20px rgba(0,0,0,.07);}
+.stat-badge{width:44px;height:44px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:19px;flex-shrink:0;}
+.sb-gold{background:var(--gold-bg);}
+.sb-sage{background:var(--sage-bg);}
+.sb-rust{background:var(--rust-bg);}
+.sb-sky{background:var(--sky-bg);}
+.stat-label{font-family:'Space Mono',monospace;font-size:9px;text-transform:uppercase;letter-spacing:1.2px;color:var(--ink4);margin-bottom:5px;}
+.stat-val{font-family:'DM Serif Display',serif;font-size:20px;line-height:1;}
+.sv-gold{color:var(--gold);}
+.sv-sage{color:var(--sage);}
+.sv-rust{color:var(--rust);}
+.sv-sky{color:var(--sky);}
+
+.page-body{max-width:1460px;margin:0 auto;padding:22px 36px 36px;}
+
+.info-banner{background:var(--sky-bg);border:1.5px solid var(--sky);border-radius:8px;padding:12px 16px;margin-bottom:16px;font-size:12px;color:var(--ink2);display:flex;align-items:center;gap:10px;}
+.info-banner b{color:var(--sky);}
+
+.filter-bar{display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap;align-items:center;}
+.fi{padding:8px 12px;border-radius:6px;border:1.5px solid var(--border);font-size:12px;font-family:'DM Sans',sans-serif;color:var(--ink);background:var(--white);outline:none;transition:border .15s;}
+.fi:focus{border-color:var(--ink);}
+.fi-search{flex:1;min-width:180px;}
+.fi-type{min-width:155px;}
+.fi-date{min-width:130px;}
+
+.tcard{background:var(--white);border:1.5px solid var(--border);border-radius:10px;overflow:hidden;}
+.tcard-top{padding:14px 18px;border-bottom:1.5px solid var(--border);display:flex;align-items:center;justify-content:space-between;background:#fafaf8;}
+.tcard-top-left{display:flex;align-items:center;gap:10px;}
+.tcard-title{font-family:'DM Serif Display',serif;font-size:17px;color:var(--ink);}
+.cnt-pill{background:var(--ink);color:#fff;padding:2px 9px;border-radius:20px;font-size:10px;font-family:'Space Mono',monospace;}
+.tcard-bal{font-family:'Space Mono',monospace;font-size:11px;color:var(--sage);letter-spacing:.3px;}
+
+table{width:100%;border-collapse:collapse;}
+thead th{padding:9px 14px;font-family:'Space Mono',monospace;font-size:9px;letter-spacing:1.2px;text-transform:uppercase;color:var(--ink4);text-align:left;border-bottom:1.5px solid var(--border);background:#fafaf8;}
+thead th.r{text-align:right;}
+tbody tr{border-bottom:1px solid #f2ede6;transition:background .1s;}
+tbody tr:hover{background:#fdf9f4;}
+tbody tr:last-child{border-bottom:none;}
+tbody td{padding:10px 14px;font-size:12.5px;vertical-align:middle;}
+.empty-row td{text-align:center;padding:48px!important;color:var(--ink4);font-size:13px;font-style:italic;}
+
+.date-cell{font-family:'Space Mono',monospace;font-size:11px;color:var(--ink3);white-space:nowrap;}
+.cheque-cell{font-family:'Space Mono',monospace;font-size:12px;color:var(--rust);font-weight:700;}
+.desc-cell{font-weight:500;color:var(--ink);}
+.ref-cell{font-family:'Space Mono',monospace;font-size:11px;color:var(--sky);}
+.debit-cell{font-family:'DM Serif Display',serif;font-size:14px;color:var(--sage);text-align:right;}
+.credit-cell{font-family:'DM Serif Display',serif;font-size:14px;color:var(--rust);text-align:right;}
+.bal-cell{font-family:'DM Serif Display',serif;font-size:14px;color:var(--ink);font-weight:600;text-align:right;}
+.bal-neg{color:var(--rust)!important;}
+.type-pill{display:inline-flex;padding:2px 9px;border-radius:20px;font-size:10px;font-weight:700;letter-spacing:.3px;}
+.tp-dr{background:var(--sage-bg);color:var(--sage);}
+.tp-cr{background:var(--rust-bg);color:var(--rust);}
+.tp-ob{background:var(--gold-bg);color:var(--gold);}
+.ob-row{background:var(--gold-bg)!important;}
+.tot-row td{background:#f7f5f0;font-family:'Space Mono',monospace;font-size:10px;font-weight:700;letter-spacing:.5px;padding:10px 14px;border-top:2px solid var(--border2);}
+
+/* Modal */
+.overlay{display:none;position:fixed;inset:0;background:rgba(10,18,26,.7);z-index:300;align-items:center;justify-content:center;backdrop-filter:blur(4px);}
+.overlay.open{display:flex;}
+.ob-modal{background:var(--white);border-radius:12px;width:430px;box-shadow:0 24px 80px rgba(0,0,0,.35);}
+.modal-hd{background:var(--ink);padding:16px 24px;display:flex;align-items:center;justify-content:space-between;border-radius:12px 12px 0 0;}
+.modal-hd h3{font-family:'DM Serif Display',serif;font-size:20px;color:#fff;}
+.mcls{background:rgba(255,255,255,.1);border:none;color:rgba(255,255,255,.6);width:30px;height:30px;border-radius:6px;cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center;}
+.mcls:hover{background:rgba(255,255,255,.2);color:#fff;}
+.modal-bd{padding:22px 24px;}
+.modal-ft{padding:14px 24px;border-top:1.5px solid var(--border);display:flex;gap:8px;justify-content:flex-end;background:#fafaf8;border-radius:0 0 12px 12px;}
+.fg{display:flex;flex-direction:column;gap:4px;margin-bottom:12px;}
+.fg label{font-family:'Space Mono',monospace;font-size:9px;text-transform:uppercase;letter-spacing:1px;color:var(--ink3);display:block;}
+.fg input{padding:9px 11px;border-radius:6px;border:1.5px solid var(--border);font-size:13px;font-family:'DM Sans',sans-serif;color:var(--ink);background:#fff;outline:none;transition:border .15s;}
+.fg input:focus{border-color:var(--ink);}
+.frow{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+
+.toast{position:fixed;bottom:22px;right:22px;z-index:999;padding:10px 18px;border-radius:7px;font-weight:600;font-size:12px;color:#fff;display:none;align-items:center;gap:8px;box-shadow:0 6px 24px rgba(0,0,0,.2);}
+.toast.show{display:flex;animation:su .3s;}
+@keyframes su{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="nav-brand">
+    <div class="nav-title"><div class="t1">Bark Ornament</div><div class="t2">Cash Mgmt</div></div>
+  </div>
+  <div class="nav-links">
+    <a href="index.html">📊 Dashboard</a>
+    <a href="cashbook.html" class="active">📒 Cash Book</a>
+    <a href="cash-reimbursement.html">💵 Reimbursement</a>
+    <a href="iou-tracker.html">🤝 IOU Tracker</a>
+    <a href="cash-count.html">🧮 Cash Count</a>
+    <a href="vouchers.html">🧾 Vouchers</a>
+  </div>
+  <div class="nav-right">
+    <div class="nav-date" id="navDate">—</div>
+    <div class="nav-dot"></div>
+  </div>
+</nav>
+
+<div class="page-hero">
+  <div class="hero-inner">
+    <div class="hero-left">
+      <h1>Cash Book</h1>
+      <p>BARK ORNAMENT (PVT) LTD · CASH BOOK 25/26</p>
+    </div>
+    <div class="hero-actions">
+      <button class="btn btn-ghost" onclick="loadAll()">↺ Refresh</button>
+      <button class="btn btn-ghost" onclick="openOBModal()">⚙ Opening Balance</button>
+      <button class="btn btn-ghost" onclick="printRegister()">🖨 Print Register</button>
+      <button class="btn btn-gold" onclick="exportCSV()">⬇ Export CSV</button>
+    </div>
+  </div>
+</div>
+
+<div class="stats-row">
+  <div class="stat">
+    <div class="stat-badge sb-gold">💰</div>
+    <div><div class="stat-label">Opening Balance</div><div class="stat-val sv-gold" id="stOB">—</div></div>
+  </div>
+  <div class="stat">
+    <div class="stat-badge sb-sage">📥</div>
+    <div><div class="stat-label">Total Debit (Cash In)</div><div class="stat-val sv-sage" id="stDR">—</div></div>
+  </div>
+  <div class="stat">
+    <div class="stat-badge sb-rust">📤</div>
+    <div><div class="stat-label">Total Credit (Vouchers)</div><div class="stat-val sv-rust" id="stCR">—</div></div>
+  </div>
+  <div class="stat">
+    <div class="stat-badge sb-sky">🏦</div>
+    <div><div class="stat-label">Closing Balance</div><div class="stat-val sv-sky" id="stBal">—</div></div>
+  </div>
+</div>
+
+<div class="page-body">
+
+  <div class="filter-bar">
+    <input class="fi fi-search" id="searchInput" placeholder="Search description, cheque no, voucher no…" oninput="renderTable()"/>
+    <select class="fi fi-type" id="typeFilter" onchange="renderTable()">
+      <option value="">All Types</option>
+      <option value="DR">Debit — Cash In (Reimbursements)</option>
+      <option value="CR">Credit — Vouchers (Cash Out)</option>
+    </select>
+    <input class="fi fi-date" type="date" id="fFrom" onchange="renderTable()"/>
+    <input class="fi fi-date" type="date" id="fTo" onchange="renderTable()"/>
+    <button class="btn btn-paper" onclick="clearF()">✕</button>
+  </div>
+
+  <div class="tcard">
+    <div class="tcard-top">
+      <div class="tcard-top-left">
+        <div class="tcard-title">Cash Book Entries</div>
+        <span class="cnt-pill" id="cntBadge">0</span>
+      </div>
+      <span class="tcard-bal" id="balDisplay"></span>
+    </div>
+    <table>
+      <thead>
+        <tr>
+          <th>Date</th>
+          <th>Cheque No</th>
+          <th>Description</th>
+          <th>Voucher No</th>
+          <th>Type</th>
+          <th class="r">Debit (Rs)</th>
+          <th class="r">Credit (Rs)</th>
+          <th class="r">Balance (Rs)</th>
+        </tr>
+      </thead>
+      <tbody id="tBody">
+        <tr class="empty-row"><td colspan="8">Loading data…</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+</div>
+
+<!-- Opening Balance Modal -->
+<div class="overlay" id="obModal">
+  <div class="ob-modal">
+    <div class="modal-hd">
+      <h3>⚙ Opening Balance</h3>
+      <button class="mcls" onclick="closeOBModal()">✕</button>
+    </div>
+    <div class="modal-bd">
+      <p style="font-size:12px;color:var(--ink3);margin-bottom:16px;">Set the opening cash balance for this period. Debits and credits are loaded automatically from your Google Sheet.</p>
+      <div class="fg"><label>Period / Month Label</label><input id="obMonth" placeholder="e.g. October 2025"/></div>
+      <div class="fg"><label>Opening Balance Date</label><input type="date" id="obDate"/></div>
+      <div class="frow">
+        <div class="fg"><label>Amount (Rs)</label><input type="number" id="obAmt" placeholder="0" min="0" step="1"/></div>
+        <div class="fg"><label>Cents (00–99)</label><input type="number" id="obCents" placeholder="00" value="0" min="0" max="99"/></div>
+      </div>
+    </div>
+    <div class="modal-ft">
+      <button class="btn btn-paper" onclick="closeOBModal()">Cancel</button>
+      <button class="btn btn-sage" onclick="saveOB()">✓ Save Opening Balance</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const SHEET_ID='1q6CwhfaCfzvq8SdS1MVxFBhYh2L1VHWMWJj_L1Ia_bc';
+const BASE='https://docs.google.com/spreadsheets/d/'+SHEET_ID+'/gviz/tq?tqx=out:json&sheet=';
+const CN='Bark Ornament (Pvt) Ltd', CA='No. 59A, Bekkegama, Panadura.';
+
+let OB=JSON.parse(localStorage.getItem('cbOB2')||'{"amt":0,"date":"","month":"Cash Book 25/26"}');
+function saveOBStore(){localStorage.setItem('cbOB2',JSON.stringify(OB));}
+
+let allEntries=[];
+
+const D=new Date();
+const DN=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'],MN=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+document.getElementById('navDate').textContent=DN[D.getDay()]+' '+MN[D.getMonth()]+' '+D.getDate();
+
+const fmt=n=>{const x=parseFloat(n);return isNaN(x)?'—':'Rs '+x.toLocaleString('en-LK',{minimumFractionDigits:2,maximumFractionDigits:2});};
+const fmtD=v=>{
+  if(!v)return'—';
+  if(typeof v==='string'&&v.startsWith('Date(')){const p=v.replace('Date(','').replace(')','').split(',');const d=new Date(+p[0],+p[1],+p[2]);return String(d.getDate()).padStart(2,'0')+'/'+String(d.getMonth()+1).padStart(2,'0')+'/'+d.getFullYear();}
+  if(typeof v==='string'&&/^\d{4}-\d{2}-\d{2}/.test(v)){const p=v.split('-');return p[2].substring(0,2)+'/'+p[1]+'/'+p[0];}
+  return v;
+};
+const parseD=v=>{
+  if(!v)return null;
+  if(typeof v==='string'&&v.startsWith('Date(')){const p=v.replace('Date(','').replace(')','').split(',');return new Date(+p[0],+p[1],+p[2]);}
+  if(typeof v==='string'&&/^\d{4}-\d{2}-\d{2}/.test(v)){const p=v.split('-');return new Date(+p[0],+p[1]-1,+p[2].substring(0,2));}
+  if(typeof v==='string'&&v.includes('/')){const p=v.split('/');return p.length===3?new Date(+p[2],+p[1]-1,+p[0]):null;}
+  return null;
+};
+const toast=(m,c)=>{const t=document.getElementById('toast');t.textContent=m;t.style.background=c||'var(--ink)';t.classList.add('show');setTimeout(()=>t.classList.remove('show'),3200);};
+
+async function fetchSheet(sheet){
+  const res=await fetch(BASE+encodeURIComponent(sheet));
+  const raw=await res.text();
+  const j=JSON.parse(raw.substring(47).slice(0,-2));
+  const cols=j.table.cols.map(c=>c.label);
+  return j.table.rows.map(r=>Object.fromEntries(cols.map((c,i)=>[c,r.c[i]?r.c[i].v:''])));
+}
+
+async function loadAll(){
+  document.getElementById('tBody').innerHTML='<tr class="empty-row"><td colspan="8">Loading from Google Sheets…</td></tr>';
+  try{
+    const [reimbs,vouchers]=await Promise.all([fetchSheet('Reimbursement'),fetchSheet('Vouchers')]);
+
+    // DEBIT — Cash Reimbursements = cash coming IN to the hand
+    const drRows=reimbs
+      .filter(r=>( r['amount']||r['Amount'] )&&(r['']||r['']||r['date']||r['Date']||r['Description']))
+      .map(r=>({
+        type:'DR',
+        date:r['']||r['']||r['date']||r['Date'],
+        cheque:r['Reference']||'',
+        desc:r['Description']||'Cash Reimbursement',
+        ref:r['Reference']||'',
+        debit:parseFloat(r['amount']||r['Amount'])||0,
+        credit:0
+      }));
+
+    // CREDIT — Vouchers = cash going OUT
+    const crRows=vouchers
+      .filter(r=>( r['Amount (Rs)']||r['Amount'] )&&(r['Date']||r['Payee Name']||r['Payee']))
+      .map(r=>({
+        type:'CR',
+        date:r['']||r['']||r['date']||r['Date'],
+        cheque:'',
+        desc:r['Description']||(r['Payee Name']||r['Payee']?'Payment — '+(r['Payee Name']||r['Payee']):'Voucher Payment'),
+        ref:r['Voucher No']||'',
+        debit:0,
+        credit:parseFloat(r['Amount (Rs)']||r['Amount'])||0
+      }));
+
+    // Merge & sort by date ascending
+    allEntries=[...drRows,...crRows].sort((a,b)=>{
+      const da=parseD(a.date),db=parseD(b.date);
+      if(!da&&!db)return 0; if(!da)return 1; if(!db)return-1;
+      return da-db;
+    });
+
+    renderTable(); updateStats();
+    toast('✅ '+drRows.length+' debits · '+crRows.length+' credits loaded','var(--sage)');
+  }catch(e){
+    document.getElementById('tBody').innerHTML='<tr class="empty-row"><td colspan="8">⚠️ Could not load — ensure Google Sheet is set to public.</td></tr>';
+    toast('⚠️ Load failed — check sheet is public','var(--rust)');
+  }
+}
+
+function withBalances(rows){
+  let bal=parseFloat(OB.amt)||0;
+  return rows.map(r=>{bal=bal+r.debit-r.credit;return{...r,balance:bal};});
+}
+
+function renderTable(){
+  const q=(document.getElementById('searchInput').value||'').toLowerCase();
+  const tf=document.getElementById('typeFilter').value;
+  const from=document.getElementById('fFrom').value;
+  const to=document.getElementById('fTo').value;
+
+  // Compute running balance on ALL entries first, then filter display
+  const allWithBal=withBalances(allEntries);
+  const closing=allWithBal.length?allWithBal[allWithBal.length-1].balance:(parseFloat(OB.amt)||0);
+
+  const filtered=allWithBal.filter(r=>{
+    if(tf&&r.type!==tf)return false;
+    if(q&&!((r.desc||'')+(r.cheque||'')+(r.ref||'')).toLowerCase().includes(q))return false;
+    if(from||to){const d=parseD(r.date);if(!d)return false;if(from&&d<new Date(from))return false;if(to&&d>new Date(to+'T23:59:59'))return false;}
+    return true;
+  });
+
+  document.getElementById('cntBadge').textContent=filtered.length;
+  document.getElementById('balDisplay').textContent='Closing Balance: '+fmt(closing);
+
+  if(!filtered.length&&!allEntries.length){
+    document.getElementById('tBody').innerHTML='<tr class="empty-row"><td colspan="8">No data — click Refresh to load from Google Sheets.</td></tr>';
+    return;
+  }
+  if(!filtered.length){
+    document.getElementById('tBody').innerHTML='<tr class="empty-row"><td colspan="8">No entries match the current filter.</td></tr>';
+    return;
+  }
+
+  // Opening Balance row always at top
+  const obRow=`<tr class="ob-row">
+    <td class="date-cell">${fmtD(OB.date)||'—'}</td>
+    <td></td>
+    <td class="desc-cell" style="color:var(--gold);font-weight:700">Opening Balance</td>
+    <td></td>
+    <td><span class="type-pill tp-ob">OB</span></td>
+    <td></td><td></td>
+    <td class="bal-cell" style="color:var(--gold)">${fmt(OB.amt||0)}</td>
+  </tr>`;
+
+  const dataRows=filtered.map(r=>`<tr>
+    <td class="date-cell">${fmtD(r.date)}</td>
+    <td class="cheque-cell">${r.cheque||''}</td>
+    <td class="desc-cell">${r.desc||'—'}</td>
+    <td class="ref-cell">${r.ref||''}</td>
+    <td><span class="type-pill ${r.type==='DR'?'tp-dr':'tp-cr'}">${r.type}</span></td>
+    <td class="debit-cell">${r.debit?fmt(r.debit):''}</td>
+    <td class="credit-cell">${r.credit?fmt(r.credit):''}</td>
+    <td class="bal-cell${r.balance<0?' bal-neg':''}">${fmt(r.balance)}</td>
+  </tr>`).join('');
+
+  const totDR=filtered.reduce((s,r)=>s+r.debit,0);
+  const totCR=filtered.reduce((s,r)=>s+r.credit,0);
+  const totRow=`<tr class="tot-row">
+    <td colspan="5" style="text-align:right">TOTAL</td>
+    <td style="text-align:right;color:var(--sage)">${fmt(totDR)}</td>
+    <td style="text-align:right;color:var(--rust)">${fmt(totCR)}</td>
+    <td style="text-align:right">${fmt(closing)}</td>
+  </tr>`;
+
+  document.getElementById('tBody').innerHTML=obRow+dataRows+totRow;
+}
+
+function updateStats(){
+  const totalDR=allEntries.reduce((s,r)=>s+r.debit,0);
+  const totalCR=allEntries.reduce((s,r)=>s+r.credit,0);
+  const closing=(parseFloat(OB.amt)||0)+totalDR-totalCR;
+  document.getElementById('stOB').textContent=fmt(OB.amt||0);
+  document.getElementById('stDR').textContent=fmt(totalDR);
+  document.getElementById('stCR').textContent=fmt(totalCR);
+  document.getElementById('stBal').textContent=fmt(closing);
+}
+
+function openOBModal(){
+  document.getElementById('obDate').value=OB.date||D.toISOString().split('T')[0];
+  document.getElementById('obMonth').value=OB.month||'';
+  document.getElementById('obAmt').value=Math.floor(OB.amt||0)||'';
+  document.getElementById('obCents').value=Math.round(((OB.amt||0)%1)*100)||'0';
+  document.getElementById('obModal').classList.add('open');
+}
+function closeOBModal(){document.getElementById('obModal').classList.remove('open');}
+function saveOB(){
+  const date=document.getElementById('obDate').value;
+  const month=document.getElementById('obMonth').value.trim();
+  const amt=parseFloat(document.getElementById('obAmt').value)||0;
+  const cents=Math.min(99,Math.max(0,parseInt(document.getElementById('obCents').value)||0));
+  OB={amt:amt+cents/100,date,month};
+  saveOBStore(); renderTable(); updateStats();
+  closeOBModal(); toast('✅ Opening balance saved','var(--sage)');
+}
+
+function clearF(){
+  ['searchInput'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('typeFilter').value='';
+  document.getElementById('fFrom').value='';
+  document.getElementById('fTo').value='';
+  renderTable();
+}
+
+function printRegister(){
+  const allWithBal=withBalances(allEntries);
+  const totalDR=allEntries.reduce((s,r)=>s+r.debit,0);
+  const totalCR=allEntries.reduce((s,r)=>s+r.credit,0);
+  const closing=(parseFloat(OB.amt)||0)+totalDR-totalCR;
+  const now=new Date().toLocaleString();
+
+  const rows=allWithBal.map((r,i)=>`
+    <tr style="background:${i%2===0?'#fff':'#f9f9f9'}">
+      <td style="padding:6px 8px;border:1px solid #e0dcd4;white-space:nowrap;font-size:11px">${fmtD(r.date)}</td>
+      <td style="padding:6px 8px;border:1px solid #e0dcd4;color:#c94a2a;font-weight:700;font-size:11px">${r.cheque||''}</td>
+      <td style="padding:6px 8px;border:1px solid #e0dcd4;font-size:11px">${r.desc||'—'}</td>
+      <td style="padding:6px 8px;border:1px solid #e0dcd4;color:#2a5ac9;font-size:11px">${r.ref||''}</td>
+      <td style="padding:6px 8px;border:1px solid #e0dcd4;text-align:right;color:#2a7a5e;font-size:11px">${r.debit?fmt(r.debit):''}</td>
+      <td style="padding:6px 8px;border:1px solid #e0dcd4;text-align:right;color:#c94a2a;font-size:11px">${r.credit?fmt(r.credit):''}</td>
+      <td style="padding:6px 8px;border:1px solid #e0dcd4;text-align:right;font-weight:700;font-size:11px;color:${r.balance<0?'#c94a2a':'#0f1923'}">${fmt(r.balance)}</td>
+    </tr>`).join('');
+
+  const w=window.open('','_blank','width=1050,height=780');
+  w.document.write(`<!DOCTYPE html><html><head><title>Cash Book</title>
+  <style>body{font-family:'Times New Roman',serif;padding:28px 32px;color:#0f1923;}
+  h2{font-size:20px;text-align:center;margin-bottom:3px;}
+  .sub{font-size:12px;text-align:center;color:#5a7289;margin-bottom:3px;}
+  .ttl{font-size:14px;font-weight:bold;text-align:center;margin-bottom:18px;border-bottom:2px solid #0f1923;padding-bottom:8px;}
+  .stats{display:flex;gap:14px;margin-bottom:18px;justify-content:center;}
+  .sb{border:1.5px solid #e0dcd4;border-radius:6px;padding:8px 14px;text-align:center;min-width:120px;}
+  .sb .lbl{font-size:9px;text-transform:uppercase;letter-spacing:1px;color:#94aab8;margin-bottom:2px;}
+  .sb .val{font-size:14px;font-weight:bold;}
+  table{width:100%;border-collapse:collapse;margin-bottom:14px;}
+  th{background:#0f1923;color:#fff;padding:8px;font-size:9px;letter-spacing:1px;text-transform:uppercase;text-align:left;border:1px solid #0f1923;}
+  th.r{text-align:right;}
+  .ob-tr td{background:#fdf6e3;font-weight:bold;}
+  .tot-tr td{background:#f0f0f0;font-weight:bold;font-size:11px;padding:8px 8px;}
+  .sigs{display:flex;gap:40px;margin-top:48px;text-align:center;}
+  .sig{flex:1;border-top:1.5px solid #0f1923;padding-top:5px;font-size:10px;color:#5a7289;text-transform:uppercase;letter-spacing:1px;margin-top:30px;}
+  .foot{text-align:center;font-size:9px;color:#94aab8;margin-top:12px;border-top:1px solid #e0dcd4;padding-top:8px;}
+  </style></head><body>
+  <h2>${CN}</h2><div class="sub">${CA}</div>
+  <div class="ttl">Cash Book — ${OB.month||'25/26'}</div>
+  <div class="stats">
+    <div class="sb"><div class="lbl">Opening Balance</div><div class="val" style="color:#c9922a">${fmt(OB.amt||0)}</div></div>
+    <div class="sb"><div class="lbl">Total Debit</div><div class="val" style="color:#2a7a5e">${fmt(totalDR)}</div></div>
+    <div class="sb"><div class="lbl">Total Credit</div><div class="val" style="color:#c94a2a">${fmt(totalCR)}</div></div>
+    <div class="sb"><div class="lbl">Closing Balance</div><div class="val" style="color:#2a5ac9">${fmt(closing)}</div></div>
+  </div>
+  <table><thead><tr>
+    <th>Date</th><th>Cheque No</th><th>Description</th><th>Voucher No</th>
+    <th class="r">Debit (Rs)</th><th class="r">Credit (Rs)</th><th class="r">Balance (Rs)</th>
+  </tr></thead><tbody>
+  <tr class="ob-tr">
+    <td style="padding:6px 8px;border:1px solid #e0dcd4;font-size:11px">${fmtD(OB.date)||'—'}</td>
+    <td style="padding:6px 8px;border:1px solid #e0dcd4"></td>
+    <td style="padding:6px 8px;border:1px solid #e0dcd4;font-size:11px;color:#c9922a">Opening Balance</td>
+    <td style="padding:6px 8px;border:1px solid #e0dcd4"></td>
+    <td style="padding:6px 8px;border:1px solid #e0dcd4"></td>
+    <td style="padding:6px 8px;border:1px solid #e0dcd4"></td>
+    <td style="padding:6px 8px;border:1px solid #e0dcd4;text-align:right;color:#c9922a;font-weight:bold">${fmt(OB.amt||0)}</td>
+  </tr>
+  ${rows}
+  <tr class="tot-tr">
+    <td colspan="4" style="text-align:right;border:1px solid #e0dcd4;padding:8px">TOTAL</td>
+    <td style="text-align:right;border:1px solid #e0dcd4;color:#2a7a5e;padding:8px">${fmt(totalDR)}</td>
+    <td style="text-align:right;border:1px solid #e0dcd4;color:#c94a2a;padding:8px">${fmt(totalCR)}</td>
+    <td style="text-align:right;border:1px solid #e0dcd4;padding:8px">${fmt(closing)}</td>
+  </tr>
+  </tbody></table>
+  <div class="sigs">
+    <div class="sig">Prepared by</div>
+    <div class="sig">Reviewed by</div>
+    <div class="sig">Approved by</div>
+  </div>
+  <div class="foot">Printed: ${now} | ${CN} | Cash Book — ${OB.month||'25/26'}</div>
+  </body></html>`);
+  w.document.close(); setTimeout(()=>w.print(),400);
+}
+
+function exportCSV(){
+  const allWithBal=withBalances(allEntries);
+  const hdr=['Date','Cheque No','Description','Voucher / Ref','Type','Debit','Credit','Balance'];
+  const obLine=[fmtD(OB.date)||'','','Opening Balance','','OB','','',OB.amt||0];
+  const rows=allWithBal.map(r=>[fmtD(r.date),r.cheque||'',r.desc||'',r.ref||'',r.type,r.debit||'',r.credit||'',r.balance]);
+  const csv=[hdr,obLine,...rows].map(r=>r.map(v=>'"'+String(v).replace(/"/g,'""')+'"').join(',')).join('\n');
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'}));
+  a.download='cashbook_'+new Date().toISOString().slice(0,10)+'.csv';
+  a.click(); toast('⬇ CSV exported','var(--sage)');
+}
+
+loadAll();
+</script>
+</body>
+</html>
