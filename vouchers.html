@@ -475,6 +475,17 @@ document.getElementById('fDate').value=D.toISOString().split('T')[0];
 document.getElementById('monthLbl').textContent=MN[D.getMonth()].toUpperCase()+' '+D.getFullYear();
 
 const fmt=n=>{const x=parseFloat(n);return isNaN(x)?'—':'Rs '+x.toLocaleString('en-LK',{minimumFractionDigits:2,maximumFractionDigits:2});};
+const getAmt=r=>{
+  // Try known field names first
+  for(const k of ['Amount (Rs)','Amount (RS)','Amount(Rs)','Amount(RS)','amount','Amount','AMOUNT','Total','total']){
+    const v=r[k];
+    if(v!==undefined&&v!==''&&v!==null){const n=parseFloat(v);if(!isNaN(n))return n;}
+  }
+  // Fallback: scan all keys for one containing 'amount'
+  const ak=Object.keys(r).find(k=>k.toLowerCase().includes('amount'));
+  if(ak){const n=parseFloat(r[ak]);if(!isNaN(n))return n;}
+  return 0;
+};
 const fmtD=v=>{if(!v)return'—';if(typeof v==='string'&&v.startsWith('Date(')){const p=v.replace('Date(','').replace(')','').split(',');const d=new Date(+p[0],+p[1],+p[2]);return String(d.getDate()).padStart(2,'0')+'/'+String(d.getMonth()+1).padStart(2,'0')+'/'+d.getFullYear();}if(typeof v==='string'&&/^\d{4}-\d{2}-\d{2}/.test(v)){const p=v.split('-');return p[2].substring(0,2)+'/'+p[1]+'/'+p[0];}return v;};
 const pD=v=>{if(!v)return null;if(typeof v==='string'&&v.startsWith('Date(')){const p=v.replace('Date(','').replace(')','').split(',');return new Date(+p[0],+p[1],+p[2]);}if(typeof v==='string'&&/^\d{4}-\d{2}-\d{2}/.test(v)){const p=v.split('-');return new Date(+p[0],+p[1]-1,+p[2].substring(0,2));}if(typeof v==='string'&&v.includes('/')){const p=v.split('/');return p.length===3?new Date(+p[2],+p[1]-1,+p[0]):new Date(v);}return new Date(v);};
 const toastMsg=(m,c)=>{const t=document.getElementById('toast');t.textContent=m;t.style.background=c||'var(--ink)';t.classList.add('show');setTimeout(()=>t.classList.remove('show'),3000);};
@@ -512,12 +523,12 @@ async function loadData(){
 }
 
 function updateStats(){
-  const tot=data.reduce((s,r)=>s+parseFloat(r['Amount']||0),0);
+  const tot=data.reduce((s,r)=>s+getAmt(r),0);
   const now=new Date();
   const m=data.filter(r=>{const d=pD(r['Date']);return d&&d.getMonth()===now.getMonth()&&d.getFullYear()===now.getFullYear();});
   document.getElementById('totalVouchers').textContent=data.length;
   document.getElementById('totalPaid').textContent=fmt(tot);
-  document.getElementById('thisMonth').textContent=fmt(m.reduce((s,r)=>s+parseFloat(r['Amount']||0),0));
+  document.getElementById('thisMonth').textContent=fmt(m.reduce((s,r)=>s+getAmt(r),0));
 }
 
 function getF(){
@@ -536,7 +547,7 @@ function getF(){
 function renderTable(){
   const f=getF();window._f=f;
   document.getElementById('cntBadge').textContent=f.length;
-  document.getElementById('fTotal').textContent=f.length?fmt(f.reduce((s,r)=>s+parseFloat(r['Amount']||0),0)):'';
+  document.getElementById('fTotal').textContent=f.length?fmt(f.reduce((s,r)=>s+getAmt(r),0)):'';
   if(!f.length){document.getElementById('tBody').innerHTML='<tr class="empty-row"><td colspan="7">No vouchers found</td></tr>';return;}
   document.getElementById('tBody').innerHTML=f.map((r,i)=>{
     const m=(r['Payment Method']||'Cash').toString();
@@ -548,7 +559,7 @@ function renderTable(){
       '<td><span class="cat-pill">'+(r['Category']||'—')+'</span></td>'+
       '<td class="desc-cell" title="'+(r['Description']||'')+'">'+(r['Description']||'—')+'</td>'+
       '<td><span class="meth-pill '+mc+'">'+m+'</span></td>'+
-      '<td class="amt-cell">'+fmt(r['Amount (Rs)']||r['Amount'])+'</td>'+
+      '<td class="amt-cell">'+fmt(getAmt(r))+'</td>'+
       '<td style="white-space:nowrap"><button class="ib ib-p" onclick="openV('+i+')" title="Print">🖨</button><button class="ib ib-e" onclick="editV('+i+')" title="Edit">✏️</button><button class="ib ib-d" onclick="delV('+i+')" title="Delete">🗑</button></td>'+
     '</tr>';
   }).join('');
@@ -619,8 +630,8 @@ function editV(i){
   // Fill form fields
   document.getElementById('fVno').value=r['Voucher No']||'';
   document.getElementById('fDate').value=r['Date']||'';
-  document.getElementById('fAmt').value=parseFloat(r['Amount (Rs)']||r['Amount']||0);
-  document.getElementById('fCents').value=Math.round((parseFloat(r['Amount (Rs)']||r['Amount']||0)%1)*100)||0;
+  document.getElementById('fAmt').value=Math.floor(getAmt(r));
+  document.getElementById('fCents').value=Math.round((getAmt(r)%1)*100)||0;
   document.getElementById('fDesc').value=r['Description']||'';
   document.getElementById('fMethod').value=r['Payment Method']||r['Method']||'Cash';
   // Payee
@@ -680,7 +691,7 @@ function openV(i){curV=(window._f||data)[i];document.getElementById('vRC').inner
 function closeModal(){document.getElementById('vModal').classList.remove('open');}
 
 function buildR(r){
-  const amt=parseFloat(r['Amount (Rs)']||r['Amount']||0),rp=Math.floor(amt),ct=Math.round((amt-rp)*100);
+  const amt=getAmt(r),rp=Math.floor(amt),ct=Math.round((amt-rp)*100);
   const w=nw(rp)+' Rupees'+(ct?' and '+nw(ct)+' Cents':'')+' only.';
   return`<div class="vr-hdr"><img src="${LG}" class="vr-logo"/><div class="vr-co"><h3>${CN}</h3><p>${CA}</p></div></div>
   <div class="vr-ttl">Payment Voucher</div>
@@ -752,7 +763,7 @@ function printStyles(isA5){
 
 function doPrint(isA5){
   if(!curV)return;const r=curV;
-  const amt=parseFloat(r['Amount (Rs)']||r['Amount']||0),rp=Math.floor(amt),ct=Math.round((amt-rp)*100);
+  const amt=getAmt(r),rp=Math.floor(amt),ct=Math.round((amt-rp)*100);
   const w=nw(rp)+' Rupees'+(ct?' and '+nw(ct)+' Cents':'')+' only.';
   const pw=window.open('','_blank',isA5?'width=600,height=780':'width=700,height=850');
   pw.document.write(`<!DOCTYPE html><html><head><title>Voucher ${r['Voucher No']||''}</title>${printStyles(isA5)}</head><body>
@@ -785,14 +796,14 @@ function doPrint(isA5){
 
 function buildRegisterHTML(forPrint){
   const f=window._f||data;
-  const tot=f.reduce((s,r)=>s+parseFloat(r['Amount']||0),0);
+  const tot=f.reduce((s,r)=>s+getAmt(r),0);
   const bc={},mc={};
   f.forEach(r=>{
     const cat=r['Category']||'Uncategorized';
-    bc[cat]=(bc[cat]||0)+parseFloat(r['Amount']||0);
+    bc[cat]=(bc[cat]||0)+getAmt(r);
     const m=r['Method']||'Cash';
     if(!mc[m])mc[m]={count:0,amt:0};
-    mc[m].count++;mc[m].amt+=parseFloat(r['Amount']||0);
+    mc[m].count++;mc[m].amt+=getAmt(r);
   });
   const now=new Date().toLocaleString('en-GB',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'});
   const ps=forPrint?`<style>
@@ -805,7 +816,7 @@ function buildRegisterHTML(forPrint){
     `<style>*{box-sizing:border-box}body,div,table,p,h2,h3,span{font-family:Arial,sans-serif;font-size:11px;color:#0f1923}</style>`;
   const catRows=Object.entries(bc).sort((a,b)=>b[1]-a[1]).map(([c,a])=>`<tr><td style="padding:7px 10px;border-bottom:1px solid #f0ece6">${c}</td><td style="padding:7px 10px;border-bottom:1px solid #f0ece6;text-align:right;font-weight:700;font-family:'Space Mono',monospace">${fmt(a)}</td></tr>`).join('');
   const mthRows=Object.entries(mc).map(([m,v])=>`<tr><td style="padding:7px 10px;border-bottom:1px solid #f0ece6">${m}</td><td style="padding:7px 10px;border-bottom:1px solid #f0ece6;text-align:center">${v.count}</td><td style="padding:7px 10px;border-bottom:1px solid #f0ece6;text-align:right;font-weight:700;font-family:'Space Mono',monospace">${fmt(v.amt)}</td></tr>`).join('');
-  const detRows=f.map(r=>`<tr style="border-bottom:1px solid #f0ece6"><td style="padding:6px 8px;font-weight:800;color:#c9922a;white-space:nowrap">${r['Voucher No']||'—'}</td><td style="padding:6px 8px;white-space:nowrap">${fmtD(r['Date'])}</td><td style="padding:6px 8px;font-weight:600">${r['Payee Name']||r['Payee']||'—'}</td><td style="padding:6px 8px">${r['Category']||'—'}</td><td style="padding:6px 8px;font-size:10px;color:#6b7e8c;max-width:180px">${r['Description']||'—'}</td><td style="padding:6px 8px">${r['Method']||'—'}</td><td style="padding:6px 8px;text-align:right;font-weight:700;font-family:'Space Mono',monospace;white-space:nowrap">${fmt(r['Amount (Rs)']||r['Amount'])}</td><td style="padding:6px 8px;white-space:nowrap">${r['Prepared By']||'—'}</td><td style="padding:6px 8px;white-space:nowrap">${r['Approved By']||'—'}</td></tr>`).join('');
+  const detRows=f.map(r=>`<tr style="border-bottom:1px solid #f0ece6"><td style="padding:6px 8px;font-weight:800;color:#c9922a;white-space:nowrap">${r['Voucher No']||'—'}</td><td style="padding:6px 8px;white-space:nowrap">${fmtD(r['Date'])}</td><td style="padding:6px 8px;font-weight:600">${r['Payee Name']||r['Payee']||'—'}</td><td style="padding:6px 8px">${r['Category']||'—'}</td><td style="padding:6px 8px;font-size:10px;color:#6b7e8c;max-width:180px">${r['Description']||'—'}</td><td style="padding:6px 8px">${r['Method']||'—'}</td><td style="padding:6px 8px;text-align:right;font-weight:700;font-family:'Space Mono',monospace;white-space:nowrap">${fmt(getAmt(r))}</td><td style="padding:6px 8px;white-space:nowrap">${r['Prepared By']||'—'}</td><td style="padding:6px 8px;white-space:nowrap">${r['Approved By']||'—'}</td></tr>`).join('');
   const filterLabel=(window._f&&window._f.length<data.length)?'Filtered Period':'All Periods';
   return `${ps}
   <!-- HEADER -->
