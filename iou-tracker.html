@@ -286,7 +286,7 @@ tbody td{padding:9px 12px;font-size:12px;color:var(--text);vertical-align:middle
               <th>Delay</th>
               <th>Settled</th>
               <th>Status</th>
-              <th style="width:70px">Actions</th>
+              <th style="width:100px">Actions</th>
             </tr>
           </thead>
           <tbody id="tableBody">
@@ -448,7 +448,8 @@ function renderTable(){
       '<td><span class="status-pill ' + (isSettled?'status-settled':'status-pending') + '">' + status + '</span></td>' +
       '<td style="white-space:nowrap">' +
         '<button class="btn btn-sm btn-outline" title="Edit" onclick="editRow('+i+')" style="padding:4px 7px;margin-right:3px">✏️</button>' +
-        '<button class="btn btn-sm btn-danger" title="Mark '+(isSettled?'Pending':'Settled')+'" onclick="toggleStatus('+i+')" style="padding:4px 7px">' + (isSettled?'↩':'✅') + '</button>' +
+        '<button class="btn btn-sm btn-danger" title="Mark '+(isSettled?'Pending':'Settled')+'" onclick="toggleStatus('+i+')" style="padding:4px 7px;margin-right:3px">' + (isSettled?'↩':'✅') + '</button>' +
+        '<button class="btn btn-sm" title="Delete" onclick="deleteRow('+i+')" style="padding:4px 7px;background:#fef2f2;color:#e02424;border:1px solid #fca5a5;border-radius:6px;cursor:pointer;font-size:11px;">🗑️</button>' +
       '</td>' +
     '</tr>';
   }).join('');
@@ -483,7 +484,35 @@ async function toggleStatus(idx){
   }catch(e){}
 }
 
-// ── Edit Row ──────────────────────────────────────────────
+// ── Delete Row ────────────────────────────────────────────
+async function deleteRow(idx){
+  const r = allData[idx];
+  const iouNo = r['IOU No'] || r['IOU No '] || '?';
+  const borrower = r['Borrower'] || '?';
+  if(!confirm('Delete IOU #'+iouNo+' for '+borrower+'?\n\nThis cannot be undone.')) return;
+
+  // Optimistic remove from local data
+  allData.splice(idx, 1);
+  renderTable();
+  updateSummary();
+  showToast('🗑️ Deleted IOU #'+iouNo,'var(--red)');
+
+  try{
+    const payload = JSON.stringify({action:'delete', sheet:'IOU', row:idx+2});
+    const iframeName = 'gas_del_' + Date.now();
+    const iframe = document.createElement('iframe');
+    iframe.name = iframeName; iframe.style.display = 'none';
+    document.body.appendChild(iframe);
+    const form = document.createElement('form');
+    form.method = 'POST'; form.action = SCRIPT_URL; form.target = iframeName; form.style.display = 'none';
+    const input = document.createElement('input');
+    input.type = 'hidden'; input.name = 'payload'; input.value = payload;
+    form.appendChild(input); document.body.appendChild(form); form.submit();
+    setTimeout(() => { form.remove(); iframe.remove(); }, 3000);
+  }catch(e){}
+}
+
+
 function editRow(idx){
   const r = allData[idx];
   document.getElementById('editRow').value = idx;
@@ -603,27 +632,71 @@ async function saveIOU(){
 function printPending(){
   const data = allData.filter(r => (r['Status']||'').toLowerCase() !== 'settled');
   const total = data.reduce((s,r) => s + parseFloat(r['Amount']||0), 0);
-  const w = window.open('','_blank','width=900,height=650');
+  const w = window.open('','_blank','width=900,height=700');
   w.document.write(`<html><head><title>IOU Report</title><style>
-    body{font-family:Arial,sans-serif;padding:28px;font-size:12px;color:#1a2636}
-    h2{font-size:18px;font-weight:800;color:#1e3a5f}
-    table{width:100%;border-collapse:collapse;margin-top:14px}
-    th{background:#f0f4f8;padding:8px 10px;font-size:10px;font-weight:700;text-transform:uppercase;color:#8a9bb0;border-bottom:2px solid #dde3ec;text-align:left}
-    td{padding:8px 10px;border-bottom:1px solid #f0f4f8}
-    .alert td{background:#fff5f5}.alert td{color:#e02424;font-weight:700}
-    .amt{font-weight:800;color:#c27803}
-    .hdr{margin-bottom:16px;border-bottom:2px solid #dde3ec;padding-bottom:12px}
+    @page{size:A4;margin:18mm 18mm 22mm;}
+    *{box-sizing:border-box;margin:0;padding:0;}
+    body{font-family:'Arial',sans-serif;padding:28px 32px;font-size:11px;color:#1a2636;}
+    h2{font-size:17px;font-weight:800;color:#1e3a5f;margin-bottom:3px;}
+    .hdr{margin-bottom:14px;padding-bottom:12px;border-bottom:2px solid #1e3a5f;}
+    .hdr p{color:#8a9bb0;font-size:10px;margin-top:3px;}
+    table{width:100%;border-collapse:collapse;margin-top:12px;font-size:10.5px;}
+    th{background:#1e3a5f;padding:7px 8px;font-size:9px;font-weight:700;text-transform:uppercase;color:#fff;text-align:left;letter-spacing:.6px;}
+    td{padding:7px 8px;border-bottom:1px solid #eef0f4;vertical-align:top;}
+    tr:nth-child(even) td{background:#f8fafc;}
+    .alert td{background:#fff5f5!important;}
+    .num{font-size:10.5px;font-weight:600;color:#4a5e78;text-align:center;width:28px;}
+    .amt{font-weight:700;color:#c27803;white-space:nowrap;}
+    .delay-warn{color:#c27803;font-weight:700;}
+    .delay-danger{color:#e02424;font-weight:700;}
+    .total-row td{background:#fffbeb!important;font-weight:800;border-top:2px solid #1e3a5f;}
+    .total-row .amt{font-size:12px;color:#1e3a5f;}
+    /* Signature section */
+    .sig-section{margin-top:40px;display:flex;justify-content:space-between;gap:20px;}
+    .sig-box{flex:1;text-align:center;}
+    .sig-line{border-top:1.5px solid #1a2636;margin:0 10px 5px;margin-top:38px;}
+    .sig-label{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:#4a5e78;}
+    .sig-title{font-size:9px;color:#8a9bb0;margin-top:2px;}
+    @media print{body{padding:0;}}
   </style></head><body>`);
-  w.document.write('<div class="hdr"><h2>Bark Ornament (Pvt) Ltd</h2><p style="color:#8a9bb0;font-size:11px">Pending IOU Report — Printed: '+new Date().toLocaleString()+'</p></div>');
-  w.document.write('<table><thead><tr><th>#</th><th>Date</th><th>IOU#</th><th>Borrower</th><th>Description</th><th>Amount</th><th>Delay</th></tr></thead><tbody>');
+  w.document.write('<div class="hdr"><h2>Bark Ornament (Pvt) Ltd</h2><p>Pending IOU Report &mdash; Printed: '+new Date().toLocaleString()+'</p></div>');
+  w.document.write('<table><thead><tr><th style="width:28px;text-align:center">#</th><th>Date</th><th>IOU#</th><th>Borrower</th><th>Description</th><th>Amount</th><th>Delay</th></tr></thead><tbody>');
   data.forEach((r,i) => {
     const delay = daysSince(r['Date']);
     const cls = delay > 3 ? ' class="alert"' : '';
     const iouNo = r['IOU No'] || r['IOU No '] || '—';
-    w.document.write('<tr'+cls+'><td>'+(i+1)+'</td><td>'+fmtDate(r['Date'])+'</td><td>'+iouNo+'</td><td><b>'+(r['Borrower']||'—')+'</b></td><td>'+(r['Description']||'—')+'</td><td class="amt">'+fmt(r['Amount'])+'</td><td>'+(delay>3?'⚠️ '+delay+' days':delay+' days')+'</td></tr>');
+    const delayCls = delay > 3 ? 'delay-danger' : (delay > 0 ? 'delay-warn' : '');
+    const delayTxt = delay > 3 ? '⚠ '+delay+' days' : (delay > 0 ? delay+' days' : '—');
+    w.document.write('<tr'+cls+'>'
+      +'<td class="num">'+(i+1)+'</td>'
+      +'<td style="white-space:nowrap">'+fmtDate(r['Date'])+'</td>'
+      +'<td style="font-weight:700;color:#1e3a5f">'+iouNo+'</td>'
+      +'<td style="font-weight:700">'+( r['Borrower']||'—')+'</td>'
+      +'<td style="color:#4a5e78">'+( r['Description']||'—')+'</td>'
+      +'<td class="amt">'+fmt(r['Amount'])+'</td>'
+      +'<td class="'+delayCls+'">'+delayTxt+'</td>'
+      +'</tr>');
   });
-  w.document.write('<tr style="background:#fffbeb;font-weight:800"><td colspan="5" style="text-align:right;padding:10px">TOTAL OUTSTANDING</td><td class="amt" style="font-size:14px">'+fmt(total)+'</td><td></td></tr>');
-  w.document.write('</tbody></table></body></html>');
+  w.document.write('<tr class="total-row"><td colspan="5" style="text-align:right;padding:8px;font-size:10px;letter-spacing:.5px;text-transform:uppercase">Total Outstanding</td><td class="amt">'+fmt(total)+'</td><td></td></tr>');
+  w.document.write('</tbody></table>');
+  // Signature section
+  w.document.write(`
+    <div class="sig-section">
+      <div class="sig-box">
+        <div class="sig-line"></div>
+        <div class="sig-label">Prepared By</div>
+      </div>
+      <div class="sig-box">
+        <div class="sig-line"></div>
+        <div class="sig-label">Checked By</div>
+      </div>
+      <div class="sig-box">
+        <div class="sig-line"></div>
+        <div class="sig-label">Approved By</div>
+      </div>
+    </div>
+  `);
+  w.document.write('</body></html>');
   w.document.close(); w.print();
 }
 
