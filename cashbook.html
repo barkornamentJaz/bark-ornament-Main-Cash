@@ -434,7 +434,10 @@ function buildMonthDropdown(){
   sel.innerHTML='<option value="">Select Month</option>';
   sorted.forEach(k=>{
     const[y,m]=k.split('-');
-    const label=monthlyOB[k]?monthlyOB[k].label:(MFULL[parseInt(m)-1]+' '+y);
+    const cleanLabel=MFULL[parseInt(m)-1]+' '+y;
+    // Use label from OB only if it's a real human label (not a Date() string or YYYY-MM)
+    const raw=monthlyOB[k]?monthlyOB[k].label:'';
+    const label=(raw&&!raw.startsWith('Date(')&&!/^\d{4}-\d{2}/.test(raw))?raw:cleanLabel;
     const opt=document.createElement('option');
     opt.value=k;opt.textContent=label;
     sel.appendChild(opt);
@@ -537,7 +540,7 @@ function renderTable(){
   const ob=getOB();
   const parts=currentMonthKey?currentMonthKey.split('-'):['',''];
   const y=parts[0],m=parts[1];
-  const obRow='<tr class="ob-row"><td class="date-cell">01/'+m+'/'+y+'</td><td></td><td class="desc-cell" style="color:var(--gold);font-weight:700">Opening Balance - '+( ob.label||currentMonthKey)+'</td><td></td><td><span class="type-pill tp-ob">OB</span></td><td></td><td></td><td class="bal-cell" style="color:var(--gold)">'+fmt(ob.amt||0)+'</td></tr>';
+  const obRow='<tr class="ob-row"><td class="date-cell">01/'+m+'/'+y+'</td><td></td><td class="desc-cell" style="color:var(--gold);font-weight:700">Opening Balance - '+(MFULL[parseInt(m)-1]+' '+y)+'</td><td></td><td><span class="type-pill tp-ob">OB</span></td><td></td><td></td><td class="bal-cell" style="color:var(--gold)">'+fmt(ob.amt||0)+'</td></tr>';
   const dataRows=filtered.map(r=>'<tr><td class="date-cell">'+fmtD(r.date)+'</td><td class="cheque-cell">'+(r.cheque||'')+'</td><td class="desc-cell">'+(r.desc||'--')+'</td><td class="ref-cell">'+(r.ref||'')+'</td><td><span class="type-pill '+(r.type==='DR'?'tp-dr':'tp-cr')+'">'+r.type+'</span></td><td class="debit-cell">'+(r.debit?fmt(r.debit):'')+'</td><td class="credit-cell">'+(r.credit?fmt(r.credit):'')+'</td><td class="bal-cell'+(r.balance<0?' bal-neg':'')+'">'+fmt(r.balance)+'</td></tr>').join('');
   const totDR=filtered.reduce((s,r)=>s+r.debit,0);
   const totCR=filtered.reduce((s,r)=>s+r.credit,0);
