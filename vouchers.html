@@ -515,7 +515,10 @@ async function loadData(){
     const raw=await r.text();
     const j=JSON.parse(raw.substring(47).slice(0,-2));
     const cols=j.table.cols.map(c=>c.label);
-    const rawRows=j.table.rows.map((r,idx)=>Object.fromEntries([...cols.map((c,i)=>[c,r.c[i]?r.c[i].v:'']),['__rowNum',idx+2]])).filter(r=>r['Payee Name']||r['Payee']||r['Amount (Rs)']);
+    // Assign __rowNum FIRST (idx+2 = sheet row, +1 for header, +1 for 1-based)
+    // then filter — keeping the correct original sheet row number
+    const allRows=j.table.rows.map((r,idx)=>Object.fromEntries([...cols.map((c,i)=>[c,r.c[i]?r.c[i].v:'']),['__rowNum',idx+2]]));
+    const rawRows=allRows.filter(r=>r['Payee Name']||r['Payee']||r['Amount (Rs)']);
     data=[...rawRows].reverse();
     data.forEach(r=>{if(r['Category'])cats.add(r['Category']);});
     rebuildCats();renderTable();updateStats();updateVnoPlaceholder();
@@ -622,7 +625,32 @@ async function addVoucher(){
   }
 }
 
-function delV(i){const r=(window._f||data)[i];if(!confirm('Delete voucher for '+r['Payee Name']||r['Payee']+'?'))return;const ix=data.indexOf(r);if(ix>-1)data.splice(ix,1);renderTable();updateStats();updateVnoPlaceholder();toastMsg('Deleted','var(--rust)');}
+async function delV(i){
+  const r=(window._f||data)[i];
+  const name=r['Payee Name']||r['Payee']||'this voucher';
+  if(!confirm('Delete voucher for "'+name+'"?'))return;
+  const sheetRowNum=r['__rowNum'];
+  const ix=data.indexOf(r);
+  if(ix>-1)data.splice(ix,1);
+  if(window._f){const fi=window._f.indexOf(r);if(fi>-1)window._f.splice(fi,1);}
+  renderTable();updateStats();updateVnoPlaceholder();
+  toastMsg('🗑 Deleting…','var(--rust)');
+  try{
+    await fetch(SCRIPT_URL,{
+      method:'POST',
+      mode:'no-cors',
+      headers:{'Content-Type':'application/x-www-form-urlencoded'},
+      body:'payload='+encodeURIComponent(JSON.stringify({
+        action:'delete',
+        sheet:'Vouchers',
+        row:sheetRowNum
+      }))
+    });
+    toastMsg('✅ Deleted from Google Sheets!','var(--rust)');
+  }catch(e){
+    toastMsg('⚠️ Deleted locally only','var(--gold)');
+  }
+}
 
 let _editIdx=null;
 function editV(i){
