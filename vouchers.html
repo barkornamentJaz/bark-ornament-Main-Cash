@@ -516,15 +516,20 @@ async function loadData(){
     // Robustly strip the google.visualization wrapper regardless of exact prefix length
     const jsonStr=raw.replace(/^[^(]+\(/, '').replace(/\);?\s*$/, '');
     const j=JSON.parse(jsonStr);
-    const cols=j.table.cols.map(c=>c.label||c.id||'');
+    // Map by position — sheet columns: VoucherNo, Date, Payee, Method, Category, Description, Amount, Cents, PreparedBy, ApprovedBy
+    const HEADERS=['Voucher No','Date','Payee Name','Payment Method','Category','Description','Amount (Rs)','Cents','Prepared By','Approved By'];
     const allRows=j.table.rows
       .filter(row=>row&&row.c&&row.c.some(cell=>cell&&cell.v!==null&&cell.v!==''))
       .map((row,idx)=>{
-        const obj=Object.fromEntries(cols.map((c,i)=>[c,row.c[i]&&row.c[i].v!==null?row.c[i].v:'']));
+        const obj={};
+        HEADERS.forEach((h,i)=>{obj[h]=row.c[i]&&row.c[i].v!==null?row.c[i].v:'';});
+        obj['Payee']=obj['Payee Name'];
+        obj['Method']=obj['Payment Method'];
+        obj['Amount']=obj['Amount (Rs)'];
         obj._sheetRow=idx+2;
         return obj;
       });
-    data=allRows.filter(r=>Object.values(r).some(v=>v&&v!=='')).reverse();
+    data=allRows.filter(r=>r['Payee Name']||r['Amount (Rs)']).reverse();
     data.forEach(r=>{if(r['Category'])cats.add(r['Category']);});
     rebuildCats();renderTable();updateStats();updateVnoPlaceholder();
     console.log('COLUMNS FROM SHEET:', cols);
