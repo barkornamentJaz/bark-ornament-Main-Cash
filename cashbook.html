@@ -353,18 +353,37 @@ async function saveMonthOB(key,label,amt){
     const payload=existingRow
       ?{action:'update',sheet:'Settings',row:existingRow,data:{month_key:key,label:label,opening_balance:amt}}
       :{action:'append',sheet:'Settings',data:{month_key:key,label:label,opening_balance:amt}};
-    const fd=new FormData();
-    fd.append('payload',JSON.stringify(payload));
-    const res=await fetch(APPS_SCRIPT_URL,{method:'POST',body:fd});
-    const json=await res.json();
-    if(json.success){
+
+    // Send as JSON (most reliable with Apps Script doPost)
+    let res=await fetch(APPS_SCRIPT_URL,{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify(payload)
+    });
+    let json=null;
+    try{json=await res.json();}catch(pe){
+      const txt=await res.clone().text();
+      toast('Apps Script error: '+txt.substring(0,100),'var(--rust)');
+      return false;
+    }
+    if(json&&json.success){
       if(!existingRow)await loadSettingsFromSheet();
       return true;
     }
-    toast('Sheet save failed: '+(json.error||'unknown'),'var(--rust)');
+    // Fallback: FormData
+    toast('Retrying with FormData...','var(--sky)');
+    const fd=new FormData();
+    fd.append('payload',JSON.stringify(payload));
+    res=await fetch(APPS_SCRIPT_URL,{method:'POST',body:fd});
+    try{json=await res.json();}catch(e2){json=null;}
+    if(json&&json.success){
+      if(!existingRow)await loadSettingsFromSheet();
+      return true;
+    }
+    toast('Sheet save failed: '+(json&&json.error?json.error:'Check Apps Script logs'),'var(--rust)');
     return false;
   }catch(e){
-    toast('Could not reach Apps Script','var(--rust)');
+    toast('Could not reach Apps Script: '+e.message,'var(--rust)');
     return false;
   }
 }
