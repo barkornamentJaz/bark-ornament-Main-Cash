@@ -515,7 +515,8 @@ async function loadData(){
     const raw=await r.text();
     const j=JSON.parse(raw.substring(47).slice(0,-2));
     const cols=j.table.cols.map(c=>c.label);
-    data=j.table.rows.map(r=>Object.fromEntries(cols.map((c,i)=>[c,r.c[i]?r.c[i].v:'']))).filter(r=>r['Payee Name']||r['Payee']||r['Amount (Rs)']).reverse();
+    const rawRows=j.table.rows.map((r,idx)=>Object.fromEntries([...cols.map((c,i)=>[c,r.c[i]?r.c[i].v:'']),['__rowNum',idx+2]])).filter(r=>r['Payee Name']||r['Payee']||r['Amount (Rs)']);
+    data=[...rawRows].reverse();
     data.forEach(r=>{if(r['Category'])cats.add(r['Category']);});
     rebuildCats();renderTable();updateStats();updateVnoPlaceholder();
     toastMsg('✅ Loaded','var(--sage)');
@@ -662,6 +663,10 @@ async function saveEdit(){
   if(cat==='Select category…')cat='';
   const cents=Math.min(99,Math.max(0,parseInt(document.getElementById('fCents').value)||0));
   const totalAmt=amt+(cents/100);
+
+  // Get the actual Google Sheet row number stored when data was loaded
+  const sheetRowNum=data[_editIdx]['__rowNum'];
+
   const updatedRow={
     ...data[_editIdx],
     'Voucher No':document.getElementById('fVno').value.trim(),
@@ -677,19 +682,17 @@ async function saveEdit(){
     'Approved By':document.getElementById('fAppr').value||''
   };
   data[_editIdx]=updatedRow;
-  // Calculate actual sheet row number (data is reversed, sheet row = total rows - editIdx + 1 header)
-  const sheetRowNum=data.length-_editIdx+1;
   _editIdx=null;
+
   renderTable();updateStats();
   ['fVno','fPayee','fDesc','fAmt'].forEach(id=>document.getElementById(id).value='');
   document.getElementById('fCents').value='0';
   document.getElementById('fCat').selectedIndex=0;
-  document.getElementById('fPrep').selectedIndex=0;
-  document.getElementById('fAppr').selectedIndex=0;
   // Reset button back
   const addBtn=document.querySelector('[onclick="saveEdit()"]');
   if(addBtn){addBtn.textContent='＋ Add Voucher';addBtn.setAttribute('onclick','addVoucher()');}
-  // Save to Google Sheets
+
+  // ── Save update to Google Sheets ──
   toastMsg('💾 Saving to Google Sheets…','var(--sky)');
   try{
     await fetch(SCRIPT_URL,{
@@ -718,7 +721,7 @@ async function saveEdit(){
     });
     toastMsg('✅ Voucher updated in Google Sheets!','var(--sage)');
   }catch(e){
-    toastMsg('⚠️ Updated locally only. Check SCRIPT_URL.','var(--gold)');
+    toastMsg('⚠️ Updated locally only — check Apps Script URL','var(--gold)');
   }
 }
 
