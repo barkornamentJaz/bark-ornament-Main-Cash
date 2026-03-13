@@ -327,7 +327,7 @@ async function fetchSheet(sheet){
 
 async function loadSettingsFromSheet(){
   try{
-    const rows=await fetchSheet('Settings');
+    const rows=await fetchSheet('Setting');
     monthlyOB={};
     settingsRowMap={};
     rows.forEach((r,i)=>{
@@ -351,8 +351,8 @@ async function saveMonthOB(key,label,amt){
   try{
     const existingRow=settingsRowMap[key];
     const payload=existingRow
-      ?{action:'update',sheet:'Settings',row:existingRow,data:{month_key:key,label:label,opening_balance:amt}}
-      :{action:'append',sheet:'Settings',data:{month_key:key,label:label,opening_balance:amt}};
+      ?{action:'update',sheet:'Setting',row:existingRow,data:{month_key:key,label:label,opening_balance:amt}}
+      :{action:'append',sheet:'Setting',data:{month_key:key,label:label,opening_balance:amt}};
 
     // Try 1: FormData (e.parameter.payload path in Apps Script)
     let json=null;
