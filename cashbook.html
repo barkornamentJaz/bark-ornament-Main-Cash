@@ -354,36 +354,56 @@ async function saveMonthOB(key,label,amt){
       ?{action:'update',sheet:'Settings',row:existingRow,data:{month_key:key,label:label,opening_balance:amt}}
       :{action:'append',sheet:'Settings',data:{month_key:key,label:label,opening_balance:amt}};
 
-    // Send as JSON (most reliable with Apps Script doPost)
-    let res=await fetch(APPS_SCRIPT_URL,{
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body:JSON.stringify(payload)
-    });
+    // Try 1: FormData (e.parameter.payload path in Apps Script)
     let json=null;
-    try{json=await res.json();}catch(pe){
-      const txt=await res.clone().text();
-      toast('Apps Script error: '+txt.substring(0,100),'var(--rust)');
-      return false;
-    }
+    try{
+      const fd=new FormData();
+      fd.append('payload',JSON.stringify(payload));
+      const res1=await fetch(APPS_SCRIPT_URL,{method:'POST',body:fd});
+      const txt1=await res1.text();
+      try{json=JSON.parse(txt1);}catch(pe){json=null;console.warn('FormData response:',txt1);}
+    }catch(fe){console.warn('FormData fetch failed:',fe.message);}
+
     if(json&&json.success){
       if(!existingRow)await loadSettingsFromSheet();
+      toast('Opening balance saved ✓','var(--sage)');
       return true;
     }
-    // Fallback: FormData
-    toast('Retrying with FormData...','var(--sky)');
-    const fd=new FormData();
-    fd.append('payload',JSON.stringify(payload));
-    res=await fetch(APPS_SCRIPT_URL,{method:'POST',body:fd});
-    try{json=await res.json();}catch(e2){json=null;}
+
+    // Try 2: URL-encoded (also hits e.parameter.payload)
+    try{
+      const encoded='payload='+encodeURIComponent(JSON.stringify(payload));
+      const res2=await fetch(APPS_SCRIPT_URL,{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:encoded});
+      const txt2=await res2.text();
+      try{json=JSON.parse(txt2);}catch(pe2){json=null;console.warn('URLenc response:',txt2);}
+    }catch(ue){console.warn('URLenc fetch failed:',ue.message);}
+
     if(json&&json.success){
       if(!existingRow)await loadSettingsFromSheet();
+      toast('Opening balance saved ✓','var(--sage)');
       return true;
     }
-    toast('Sheet save failed: '+(json&&json.error?json.error:'Check Apps Script logs'),'var(--rust)');
+
+    // Try 3: Raw JSON body (e.postData.contents path)
+    try{
+      const res3=await fetch(APPS_SCRIPT_URL,{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify(payload)});
+      const txt3=await res3.text();
+      try{json=JSON.parse(txt3);}catch(pe3){json=null;console.warn('JSON response:',txt3);}
+    }catch(je){console.warn('JSON fetch failed:',je.message);}
+
+    if(json&&json.success){
+      if(!existingRow)await loadSettingsFromSheet();
+      toast('Opening balance saved ✓','var(--sage)');
+      return true;
+    }
+
+    const errMsg=json&&json.error?json.error:'No response from server. Check: 1) Apps Script deployed as Web App, 2) Access set to Anyone, 3) Re-deploy after changes.';
+    toast('Save failed: '+errMsg,'var(--rust)');
+    console.error('All save attempts failed. Last response:',json);
     return false;
   }catch(e){
-    toast('Could not reach Apps Script: '+e.message,'var(--rust)');
+    toast('Network error: '+e.message+' — Check Apps Script deployment.','var(--rust)');
+    console.error('saveMonthOB error:',e);
     return false;
   }
 }
