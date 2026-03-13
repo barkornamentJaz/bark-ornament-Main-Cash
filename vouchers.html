@@ -527,6 +527,8 @@ async function loadData(){
     data=allRows.filter(r=>Object.values(r).some(v=>v&&v!=='')).reverse();
     data.forEach(r=>{if(r['Category'])cats.add(r['Category']);});
     rebuildCats();renderTable();updateStats();updateVnoPlaceholder();
+    console.log('COLUMNS FROM SHEET:', cols);
+    console.log('FIRST ROW:', data[data.length-1]);
     toastMsg('✅ Loaded '+data.length+' vouchers','var(--sage)');
   }catch(e){
     console.error('loadData error:',e);
