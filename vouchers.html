@@ -516,17 +516,16 @@ async function loadData(){
     // Robustly strip the google.visualization wrapper regardless of exact prefix length
     const jsonStr=raw.replace(/^[^(]+\(/, '').replace(/\);?\s*$/, '');
     const j=JSON.parse(jsonStr);
-    // Map by position — sheet columns: VoucherNo, Date, Payee, Method, Category, Description, Amount, Cents, PreparedBy, ApprovedBy
-    const HEADERS=['Voucher No','Date','Payee Name','Payment Method','Category','Description','Amount (Rs)','Cents','Prepared By','Approved By'];
+    // Use actual column labels from sheet headers
+    const cols=j.table.cols.map(c=>c.label||c.id||'');
     const allRows=j.table.rows
       .filter(row=>row&&row.c&&row.c.some(cell=>cell&&cell.v!==null&&cell.v!==''))
       .map((row,idx)=>{
-        const obj={};
-        HEADERS.forEach((h,i)=>{obj[h]=row.c[i]&&row.c[i].v!==null?row.c[i].v:'';});
-        obj['Payee']=obj['Payee Name'];
-        obj['Method']=obj['Payment Method'];
-        obj['Amount']=obj['Amount (Rs)'];
-        obj._sheetRow=idx+2;
+        const obj=Object.fromEntries(cols.map((c,i)=>[c,row.c[i]&&row.c[i].v!==null?row.c[i].v:'']));
+        obj['Payee']=obj['Payee Name']||obj['Payee']||'';
+        obj['Method']=obj['Payment Method']||obj['Method']||'';
+        obj['Amount']=obj['Amount (Rs)']||obj['Amount']||0;
+        obj._sheetRow=idx+2; // row 1 is header, data starts at row 2
         return obj;
       });
     data=allRows.filter(r=>r['Payee Name']||r['Amount (Rs)']).reverse();
@@ -720,6 +719,7 @@ async function saveEdit(){
   toastMsg('💾 Updating Google Sheets…','var(--sky)');
   if(!sheetRow){toastMsg('⚠️ Row number missing — reload and try again','var(--gold)');return;}
   try{
+    console.log('UPDATE payload:',{action:'update',sheet:'Vouchers',rowNum:sheetRow,voucherNo:updated['Voucher No']});
     await fetch(SCRIPT_URL,{method:'POST',mode:'no-cors',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:'payload='+encodeURIComponent(JSON.stringify({action:'update',sheet:'Vouchers',rowNum:sheetRow,voucherNo:updated['Voucher No']||'',data:{'Voucher No':updated['Voucher No'],'Date':updated['Date'],'Payee Name':updated['Payee Name'],'Payee':updated['Payee'],'Category':updated['Category'],'Description':updated['Description'],'Method':updated['Method'],'Payment Method':updated['Payment Method'],'Amount (Rs)':updated['Amount (Rs)'],'Amount':updated['Amount'],'Prepared By':updated['Prepared By'],'Approved By':updated['Approved By']}}))});
     toastMsg('✅ Updated! Reloading…','var(--sage)');
     setTimeout(()=>loadData(), 1800);
