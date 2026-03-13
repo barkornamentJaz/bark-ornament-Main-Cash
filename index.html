@@ -240,14 +240,41 @@
 
   async function loadCashBook(){
     try{
-      const [reimbs,vouchers]=await Promise.all([fetchSheet('Reimbursement'),fetchSheet('Vouchers')]);
-      const drRows=reimbs.filter(r=>r['amount']||r['Amount']).map(r=>({type:'DR',date:r['']||r['']||r['date']||r['Date'],desc:r['Description']||'Cash Reimbursement',amt:parseFloat(r['amount']||r['Amount']||0)}));
-      const crRows=vouchers.filter(r=>r['Amount (Rs)']||r['Amount']).map(r=>({type:'CR',date:r['Date'],desc:(r['Payee Name']||r['Payee']||'')+(r['Description']?(' — '+r['Description']):''),amt:parseFloat(r['Amount (Rs)']||r['Amount']||0)}));
-      const all=[...drRows,...crRows].sort((a,b)=>{const da=parseDate(a.date),db=parseDate(b.date);if(!da&&!db)return 0;if(!da)return 1;if(!db)return-1;return da-db;}).reverse().slice(0,8);
-      document.getElementById('cashbookBody').innerHTML=all.length?all.map(r=>{const isCR=r.type==='CR';return'<tr><td>'+fmtDate(r.date)+'</td><td style="max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+r.desc+'</td><td style="color:var(--text3);font-size:11px"></td><td><span class="badge '+(isCR?'badge-cr':'badge-dr')+'">'+r.type+'</span></td><td class="'+(isCR?'amount-cr':'amount-dr')+'">'+fmt(r.amt)+'</td></tr>';}).join(''):'<tr class="loading-row"><td colspan="5">No data found</td></tr>';
-      return reimbs;
+      const [reimbs,vouchers,settings]=await Promise.all([fetchSheet('Reimbursement'),fetchSheet('Vouchers'),fetchSheet('Setting')]);
+
+      // Get today's month key
+      const now=new Date();
+      const todayKey=now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0');
+
+      // Get opening balance for current month from Setting sheet
+      let openingBalance=0;
+      settings.forEach(r=>{
+        const k=(r['month_key']||r['Month Key']||r['monthkey']||'').trim();
+        if(k===todayKey){openingBalance=parseFloat(r['opening_balance']||r['Opening Balance']||0)||0;}
+      });
+
+      const drRows=reimbs.filter(r=>r['amount']||r['Amount']).map(r=>({type:'DR',date:r['Date']||r['date']||r[''],desc:r['Description']||'Cash Reimbursement',amt:parseFloat(r['amount']||r['Amount']||0)}));
+      const crRows=vouchers.filter(r=>r['Amount (Rs)']||r['Amount']).map(r=>({type:'CR',date:r['Date'],desc:(r['Payee Name']||r['Payee']||'')+(r['Description']?' — '+r['Description']:''),amt:parseFloat(r['Amount (Rs)']|||r['Amount']||0)}));
+
+      // Filter to current month only for balance calculation
+      const allEntries=[...drRows,...crRows];
+      const monthEntries=allEntries.filter(r=>{
+        const d=parseDate(r.date);
+        if(!d)return false;
+        const mk=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');
+        return mk===todayKey;
+      });
+      const totalDR=monthEntries.filter(r=>r.type==='DR').reduce((s,r)=>s+r.amt,0);
+      const totalCR=monthEntries.filter(r=>r.type==='CR').reduce((s,r)=>s+r.amt,0);
+      // Closing balance = OB + DR - CR
+      window._cashClosingBalance=openingBalance+totalDR-totalCR;
+
+      // Show recent 8 entries (all time, sorted by date desc)
+      const recent=allEntries.sort((a,b)=>{const da=parseDate(a.date),db=parseDate(b.date);if(!da&&!db)return 0;if(!da)return 1;if(!db)return-1;return db-da;}).slice(0,8);
+      document.getElementById('cashbookBody').innerHTML=recent.length?recent.map(r=>{const isCR=r.type==='CR';return'<tr><td>'+fmtDate(r.date)+'</td><td style="max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+r.desc+'</td><td style="color:var(--text3);font-size:11px"></td><td><span class="badge '+(isCR?'badge-cr':'badge-dr')+'">'+r.type+'</span></td><td class="'+(isCR?'amount-cr':'amount-dr')+'">'+fmt(r.amt)+'</td></tr>';}).join(''):'<tr class="loading-row"><td colspan="5">No data found</td></tr>';
+      return {drRows,crRows,openingBalance};
     }
-    catch(e){document.getElementById('cashbookBody').innerHTML='<tr class="loading-row"><td colspan="5">Error loading data</td></tr>';return[];}}
+    catch(e){console.error('loadCashBook error:',e);document.getElementById('cashbookBody').innerHTML='<tr class="loading-row"><td colspan="5">Error loading data</td></tr>';return{drRows:[],crRows:[],openingBalance:0};}}
 
   async function loadIOU(){
     try{const rows=await fetchSheet('IOU');const pending=rows.filter(r=>(r['Status']||'').toString().toLowerCase()!=='settled');
@@ -261,13 +288,12 @@
 
   async function loadCashCount(){try{const rows=await fetchSheet('CashCount');const total=rows.filter(r=>r['Cash']&&r['Count']).reduce((s,r)=>s+parseFloat(r['Cash']||0)*parseFloat(r['Count']||0),0);return total;}catch{return 0;}}
 
-  function calcSummary(cbRows,iouRows,physical){
-    const valid=cbRows.filter(r=>r['amount']||r['Amount']);
-    const opening=parseFloat((valid[0]&&(valid[0]['Opening Balance']||valid[0]['Opening']))||0);
-    let income=0;valid.forEach(r=>{const a=parseFloat(r['amount']||r['Amount']||0);income+=a;});
-    const balance=opening+income;
+  function calcSummary(cbData,iouRows,physical){
+    // Closing balance = OB + total DR - total CR for current month
+    const balance=window._cashClosingBalance||0;
     const pending=iouRows.filter(r=>(r['Status']||'').toString().toLowerCase()!=='settled');
     const iouTotal=pending.reduce((s,r)=>s+parseFloat(r['Amount']||0),0);
+    // Cash Difference = Closing Balance - (IOU Outstanding + Physical Cash)
     const diff=balance-(iouTotal+physical);
     document.getElementById('cashBalance').textContent=fmt(balance);
     document.getElementById('iouOutstanding').textContent=fmt(iouTotal);
@@ -279,8 +305,8 @@
   }
 
   async function loadAll(){
-    const[cbRows,iouRows,physical]=await Promise.all([loadCashBook(),loadIOU(),loadCashCount()]);
-    loadReimb();calcSummary(cbRows,iouRows,physical);
+    const[cbData,iouRows,physical]=await Promise.all([loadCashBook(),loadIOU(),loadCashCount()]);
+    loadReimb();calcSummary(cbData,iouRows,physical);
     const t=document.getElementById('toast');t.classList.add('show');setTimeout(()=>t.classList.remove('show'),3000);}
 
   loadAll();
