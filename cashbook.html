@@ -331,9 +331,24 @@ async function loadSettingsFromSheet(){
     monthlyOB={};
     settingsRowMap={};
     rows.forEach((r,i)=>{
-      const k=(r['month_key']||'').trim();
+      let k=(r['month_key']||'').toString().trim();
       if(!k)return;
-      monthlyOB[k]={label:r['label']||k, amt:parseFloat(r['opening_balance'])||0};
+      // If month_key is a Date value like "Date(2026,2,1)", convert to YYYY-MM
+      if(k.startsWith('Date(')){
+        const p=k.replace('Date(','').replace(')','').split(',');
+        const d=new Date(+p[0],+p[1],+p[2]);
+        k=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');
+      }
+      // If it looks like a number (Excel serial date), convert it
+      if(/^\d{5}$/.test(k)){
+        const d=new Date(Math.round((parseFloat(k)-25569)*86400*1000));
+        k=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');
+      }
+      if(!k)return;
+      // Build a proper label if missing
+      const parts=k.split('-');
+      const defaultLabel=parts.length===2?MFULL[parseInt(parts[1])-1]+' '+parts[0]:k;
+      monthlyOB[k]={label:r['label']||defaultLabel, amt:parseFloat(r['opening_balance'])||0};
       settingsRowMap[k]=i+2;
     });
     localStorage.setItem('monthlyOB',JSON.stringify(monthlyOB));
