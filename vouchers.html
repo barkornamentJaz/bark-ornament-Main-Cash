@@ -621,22 +621,7 @@ async function addVoucher(){
   }
 }
 
-async function delV(i){
-  const r=(window._f||data)[i];
-  if(!confirm('Delete voucher for '+(r['Payee Name']||r['Payee']||'?')+'?'))return;
-  const ix=data.indexOf(r);
-  const sheetRow=r['__rowNum'];
-  if(ix>-1)data.splice(ix,1);
-  renderTable();updateStats();updateVnoPlaceholder();
-  toastMsg('Deleted','var(--rust)');
-  try{
-    await fetch(SCRIPT_URL,{
-      method:'POST',mode:'no-cors',
-      headers:{'Content-Type':'application/x-www-form-urlencoded'},
-      body:'payload='+encodeURIComponent(JSON.stringify({action:'delete',sheet:'Vouchers',row:sheetRow}))
-    });
-  }catch(e){}
-}
+async function delV(i){const r=(window._f||data)[i];if(!confirm('Delete voucher for '+(r['Payee Name']||r['Payee']||'')+'?'))return;const ix=data.indexOf(r);const sheetRow=r['__rowNum'];if(ix>-1)data.splice(ix,1);renderTable();updateStats();updateVnoPlaceholder();toastMsg('Deleted','var(--rust)');try{await fetch(SCRIPT_URL,{method:'POST',mode:'no-cors',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:'payload='+encodeURIComponent(JSON.stringify({action:'delete',sheet:'Vouchers',row:sheetRow}))});}catch(e){}}
 
 let _editIdx=null;
 function editV(i){
@@ -690,8 +675,6 @@ async function saveEdit(){
     'Prepared By':document.getElementById('fPrep').value||'',
     'Approved By':document.getElementById('fAppr').value||''
   };
-  const sheetRow=data[_editIdx]['__rowNum'];
-  const saved=data[_editIdx];
   _editIdx=null;
   renderTable();updateStats();
   ['fVno','fPayee','fDesc','fAmt'].forEach(id=>document.getElementById(id).value='');
@@ -700,24 +683,10 @@ async function saveEdit(){
   // Reset button back
   const addBtn=document.querySelector('[onclick="saveEdit()"]');
   if(addBtn){addBtn.textContent='＋ Add Voucher';addBtn.setAttribute('onclick','addVoucher()');}
+  const sheetRow=data[_editIdx]?data[_editIdx]['__rowNum']:null;
+  const saved={...data[_editIdx]};
   toastMsg('✅ Voucher updated!','var(--sage)');
-  try{
-    await fetch(SCRIPT_URL,{
-      method:'POST',mode:'no-cors',
-      headers:{'Content-Type':'application/x-www-form-urlencoded'},
-      body:'payload='+encodeURIComponent(JSON.stringify({
-        action:'update',sheet:'Vouchers',rowNum:sheetRow,
-        data:{
-          'Voucher No':saved['Voucher No'],'Date':saved['Date'],
-          'Payee Name':saved['Payee Name'],'Payee':saved['Payee'],
-          'Category':saved['Category'],'Description':saved['Description'],
-          'Method':saved['Method'],'Payment Method':saved['Payment Method'],
-          'Amount (Rs)':saved['Amount (Rs)'],'Amount':saved['Amount'],
-          'Prepared By':saved['Prepared By'],'Approved By':saved['Approved By']
-        }
-      }))
-    });
-  }catch(e){}
+  if(sheetRow)try{await fetch(SCRIPT_URL,{method:'POST',mode:'no-cors',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:'payload='+encodeURIComponent(JSON.stringify({action:'update',sheet:'Vouchers',rowNum:sheetRow,data:{'Voucher No':saved['Voucher No'],'Date':saved['Date'],'Payee Name':saved['Payee Name'],'Payee':saved['Payee'],'Category':saved['Category'],'Description':saved['Description'],'Method':saved['Method'],'Payment Method':saved['Payment Method'],'Amount (Rs)':saved['Amount (Rs)'],'Amount':saved['Amount'],'Prepared By':saved['Prepared By'],'Approved By':saved['Approved By']}}))});}catch(e){}
 }
 
 let curV=null;
