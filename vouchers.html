@@ -517,8 +517,8 @@ async function loadData(){
     const cols=j.table.cols.map(c=>c.label);
     // Assign __rowNum FIRST (idx+2 = sheet row, +1 for header, +1 for 1-based)
     // then filter — keeping the correct original sheet row number
-    const allRows=j.table.rows.map((r,idx)=>Object.fromEntries([...cols.map((c,i)=>[c,r.c[i]?r.c[i].v:'']),['__rowNum',idx+2]]));
-    const rawRows=allRows.filter(r=>r['Payee Name']||r['Payee']||r['Amount (Rs)']);
+    const allRows=j.table.rows.map((row,idx)=>Object.fromEntries([...cols.map((c,i)=>[c,row.c[i]?row.c[i].v:'']),['__rowNum',idx+2]]));
+    const rawRows=allRows.filter(row=>row['Payee Name']||row['Payee']||row['Amount (Rs)']);
     data=[...rawRows].reverse();
     data.forEach(r=>{if(r['Category'])cats.add(r['Category']);});
     rebuildCats();renderTable();updateStats();updateVnoPlaceholder();
