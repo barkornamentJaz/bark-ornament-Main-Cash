@@ -236,7 +236,18 @@
   function fmt(n){const x=parseFloat(n);return isNaN(x)?'—':'Rs '+x.toLocaleString('en-LK',{minimumFractionDigits:2,maximumFractionDigits:2});}
   function parseSheet(raw){const j=JSON.parse(raw.substring(47).slice(0,-2));const cols=j.table.cols.map(c=>c.label);return j.table.rows.map(r=>Object.fromEntries(cols.map((c,i)=>[c,r.c[i]?r.c[i].v:''])));}
   async function fetchSheet(sheet){const res=await fetch(BASE+encodeURIComponent(sheet));return parseSheet(await res.text());}
-  function fmtDate(v){if(!v)return'—';if(typeof v==='string'&&v.startsWith('Date(')){const p=v.replace('Date(','').replace(')','').split(',');const d=new Date(+p[0],+p[1],+p[2]);return String(d.getMonth()+1).padStart(2,'0')+'/'+String(d.getDate()).padStart(2,'0')+'/'+d.getFullYear();}return v;}
+  function fmtDate(v){if(!v)return'—';if(typeof v==='string'&&v.startsWith('Date(')){const p=v.replace('Date(','').replace(')','').split(',');const d=new Date(+p[0],+p[1],+p[2]);return String(d.getDate()).padStart(2,'0')+'/'+String(d.getMonth()+1).padStart(2,'0')+'/'+d.getFullYear();}if(typeof v==='string'&&/^\d{4}-\d{2}-\d{2}/.test(v)){const p=v.split('T')[0].split('-');return p[2]+'/'+p[1]+'/'+p[0];}return v;}
+
+  function parseDate(v){
+    if(!v&&v!==0)return null;
+    if(typeof v==='number'){const d=new Date(Math.round((v-25569)*86400*1000));return isNaN(d)?null:d;}
+    if(typeof v!=='string')return null;
+    v=v.trim();
+    if(v.startsWith('Date(')){const p=v.replace('Date(','').replace(')','').split(',');return new Date(+p[0],+p[1],+p[2]);}
+    if(/^\d{4}-\d{2}-\d{2}/.test(v)){const p=v.split('T')[0].split('-');return new Date(+p[0],+p[1]-1,+p[2]);}
+    if(/^\d{2}\/\d{2}\/\d{4}/.test(v)){const p=v.split('/');return new Date(+p[2],+p[1]-1,+p[0]);}
+    return null;
+  }
 
   async function loadCashBook(){
     try{
@@ -254,7 +265,7 @@
       });
 
       const drRows=reimbs.filter(r=>r['amount']||r['Amount']).map(r=>({type:'DR',date:r['Date']||r['date']||r[''],desc:r['Description']||'Cash Reimbursement',amt:parseFloat(r['amount']||r['Amount']||0)}));
-      const crRows=vouchers.filter(r=>r['Amount (Rs)']||r['Amount']).map(r=>({type:'CR',date:r['Date'],desc:(r['Payee Name']||r['Payee']||'')+(r['Description']?' — '+r['Description']:''),amt:parseFloat(r['Amount (Rs)']|||r['Amount']||0)}));
+      const crRows=vouchers.filter(r=>r['Amount (Rs)']||r['Amount']).map(r=>({type:'CR',date:r['Date'],desc:(r['Payee Name']||r['Payee']||'')+(r['Description']?' — '+r['Description']:''),amt:parseFloat(r['Amount (Rs)']||r['Amount']||0)}));
 
       // Filter to current month only for balance calculation
       const allEntries=[...drRows,...crRows];
