@@ -515,7 +515,7 @@ async function loadData(){
     const raw=await r.text();
     const j=JSON.parse(raw.substring(47).slice(0,-2));
     const cols=j.table.cols.map(c=>c.label);
-    data=j.table.rows.map((row,idx)=>Object.fromEntries([...cols.map((c,i)=>[c,row.c[i]?row.c[i].v:'']),['__rowNum',idx+2]])).filter(row=>row['Payee Name']||row['Payee']||row['Amount (Rs)']).reverse();
+    data=j.table.rows.map(r=>Object.fromEntries(cols.map((c,i)=>[c,r.c[i]?r.c[i].v:'']))).filter(r=>r['Payee Name']||r['Payee']||r['Amount (Rs)']).reverse();
     data.forEach(r=>{if(r['Category'])cats.add(r['Category']);});
     rebuildCats();renderTable();updateStats();updateVnoPlaceholder();
     toastMsg('✅ Loaded','var(--sage)');
@@ -621,7 +621,7 @@ async function addVoucher(){
   }
 }
 
-async function delV(i){const r=(window._f||data)[i];if(!confirm('Delete voucher for '+(r['Payee Name']||r['Payee']||'')+'?'))return;const ix=data.indexOf(r);const sheetRow=r['__rowNum'];if(ix>-1)data.splice(ix,1);renderTable();updateStats();updateVnoPlaceholder();toastMsg('Deleted','var(--rust)');try{await fetch(SCRIPT_URL,{method:'POST',mode:'no-cors',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:'payload='+encodeURIComponent(JSON.stringify({action:'delete',sheet:'Vouchers',row:sheetRow}))});}catch(e){}}
+async function delV(i){const r=(window._f||data)[i];if(!confirm('Delete voucher for '+(r['Payee Name']||r['Payee']||'')+'?'))return;const ix=data.indexOf(r);const sheetRow=data.length-ix+1;if(ix>-1)data.splice(ix,1);renderTable();updateStats();updateVnoPlaceholder();toastMsg('Deleted','var(--rust)');try{await fetch(SCRIPT_URL,{method:'POST',mode:'no-cors',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:'payload='+encodeURIComponent(JSON.stringify({action:'delete',sheet:'Vouchers',row:sheetRow}))});}catch(e){}}
 
 let _editIdx=null;
 function editV(i){
@@ -683,10 +683,10 @@ async function saveEdit(){
   // Reset button back
   const addBtn=document.querySelector('[onclick="saveEdit()"]');
   if(addBtn){addBtn.textContent='＋ Add Voucher';addBtn.setAttribute('onclick','addVoucher()');}
-  const sheetRow=data[_editIdx]?data[_editIdx]['__rowNum']:null;
-  const saved={...data[_editIdx]};
   toastMsg('✅ Voucher updated!','var(--sage)');
-  if(sheetRow)try{await fetch(SCRIPT_URL,{method:'POST',mode:'no-cors',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:'payload='+encodeURIComponent(JSON.stringify({action:'update',sheet:'Vouchers',rowNum:sheetRow,data:{'Voucher No':saved['Voucher No'],'Date':saved['Date'],'Payee Name':saved['Payee Name'],'Payee':saved['Payee'],'Category':saved['Category'],'Description':saved['Description'],'Method':saved['Method'],'Payment Method':saved['Payment Method'],'Amount (Rs)':saved['Amount (Rs)'],'Amount':saved['Amount'],'Prepared By':saved['Prepared By'],'Approved By':saved['Approved By']}}))});}catch(e){}
+  const sheetRow=data.length-(_editIdx||0)+1;
+  const saved=data[_editIdx||0]?{...data[_editIdx||0]}:null;
+  if(saved)try{await fetch(SCRIPT_URL,{method:'POST',mode:'no-cors',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:'payload='+encodeURIComponent(JSON.stringify({action:'update',sheet:'Vouchers',rowNum:sheetRow,data:{'Voucher No':saved['Voucher No'],'Date':saved['Date'],'Payee Name':saved['Payee Name'],'Payee':saved['Payee'],'Category':saved['Category'],'Description':saved['Description'],'Method':saved['Method'],'Payment Method':saved['Payment Method'],'Amount (Rs)':saved['Amount (Rs)'],'Amount':saved['Amount'],'Prepared By':saved['Prepared By'],'Approved By':saved['Approved By']}}))});}catch(e){}
 }
 
 let curV=null;
