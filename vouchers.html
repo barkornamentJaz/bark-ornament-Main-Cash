@@ -521,7 +521,19 @@ async function loadData(){
     const allRows=j.table.rows
       .filter(row=>row&&row.c&&row.c.some(cell=>cell&&cell.v!==null&&cell.v!==''))
       .map((row,idx)=>{
-        const obj=Object.fromEntries(cols.map((c,i)=>[c,row.c[i]&&row.c[i].v!==null?row.c[i].v:'']));
+        const obj=Object.fromEntries(cols.map((c,i)=>{
+          const cell=row.c[i];
+          if(!cell||cell.v===null)return[c,''];
+          // gviz returns dates as "Date(yyyy,m,d)" — convert to yyyy-MM-dd
+          let v=cell.v;
+          if(typeof v==='string'&&v.startsWith('Date(')){
+            const p=v.slice(5,-1).split(',').map(Number);
+            v=p[0]+'-'+String(p[1]+1).padStart(2,'0')+'-'+String(p[2]).padStart(2,'0');
+          } else if(v instanceof Date){
+            v=v.getFullYear()+'-'+String(v.getMonth()+1).padStart(2,'0')+'-'+String(v.getDate()).padStart(2,'0');
+          }
+          return[c,v];
+        }));
         obj['Payee']=obj['Payee Name']||obj['Payee']||'';
         obj['Method']=obj['Payment Method']||obj['Method']||'';
         obj['Amount']=obj['Amount (Rs)']||obj['Amount']||0;
