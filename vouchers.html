@@ -631,7 +631,7 @@ async function delV(i){
   toastMsg('🗑 Deleting…','var(--rust)');
   if(!sheetRow){toastMsg('⚠️ Row number missing — reload and try again','var(--gold)');return;}
   try{
-    await fetch(SCRIPT_URL,{method:'POST',mode:'no-cors',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:'payload='+encodeURIComponent(JSON.stringify({action:'delete',sheet:'Vouchers',row:sheetRow}))});
+    await fetch(SCRIPT_URL,{method:'POST',mode:'no-cors',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:'payload='+encodeURIComponent(JSON.stringify({action:'delete',sheet:'Vouchers',row:sheetRow,voucherNo:r['Voucher No']||''}))});
     toastMsg('✅ Deleted! Reloading…','var(--rust)');
     setTimeout(()=>loadData(), 1800);
   }catch(e){toastMsg('⚠️ Delete failed — check connection','var(--gold)');}
@@ -703,7 +703,7 @@ async function saveEdit(){
   toastMsg('💾 Updating Google Sheets…','var(--sky)');
   if(!sheetRow){toastMsg('⚠️ Row number missing — reload and try again','var(--gold)');return;}
   try{
-    await fetch(SCRIPT_URL,{method:'POST',mode:'no-cors',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:'payload='+encodeURIComponent(JSON.stringify({action:'update',sheet:'Vouchers',rowNum:sheetRow,data:{'Voucher No':updated['Voucher No'],'Date':updated['Date'],'Payee Name':updated['Payee Name'],'Payee':updated['Payee'],'Category':updated['Category'],'Description':updated['Description'],'Method':updated['Method'],'Payment Method':updated['Payment Method'],'Amount (Rs)':updated['Amount (Rs)'],'Amount':updated['Amount'],'Prepared By':updated['Prepared By'],'Approved By':updated['Approved By']}}))});
+    await fetch(SCRIPT_URL,{method:'POST',mode:'no-cors',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:'payload='+encodeURIComponent(JSON.stringify({action:'update',sheet:'Vouchers',rowNum:sheetRow,voucherNo:updated['Voucher No']||'',data:{'Voucher No':updated['Voucher No'],'Date':updated['Date'],'Payee Name':updated['Payee Name'],'Payee':updated['Payee'],'Category':updated['Category'],'Description':updated['Description'],'Method':updated['Method'],'Payment Method':updated['Payment Method'],'Amount (Rs)':updated['Amount (Rs)'],'Amount':updated['Amount'],'Prepared By':updated['Prepared By'],'Approved By':updated['Approved By']}}))});
     toastMsg('✅ Updated! Reloading…','var(--sage)');
     setTimeout(()=>loadData(), 1800);
   }catch(e){toastMsg('⚠️ Update failed — check connection','var(--gold)');}
