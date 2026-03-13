@@ -406,15 +406,16 @@ async function loadAll(){
   try{
     await loadSettingsFromSheet();
     const[reimbs,vouchers]=await Promise.all([fetchSheet('Reimbursement'),fetchSheet('Vouchers')]);
+    if(reimbs.length>0){const cols=Object.keys(reimbs[0]);toast('Reimb columns: '+cols.join(' | '),'var(--sky)');}
 
     const drRows=reimbs
-      .filter(r=>(r['amount']||r['Amount'])&&(r['']||r['Description']))
+      .filter(r=>(r['amount']||r['Amount'])&&(r['Date']||r['date']||r['']||r['Description']))
       .map(r=>({
         type:'DR',
-        date:r[''],
-        cheque:r['Reference']||'',
-        desc:r['Description']||'Cash Reimbursement',
-        ref:r['Reference']||'',
+        date:r['Date']||r['date']||r[''],
+        cheque:r['Cheque No']||r['cheque_no']||r['Reference']||'',
+        desc:r['Description']||r['description']||'Cash Reimbursement',
+        ref:r['Voucher No']||r['voucher_no']||r['Reference']||r['ref']||'',
         debit:parseFloat(r['amount']||r['Amount'])||0,
         credit:0
       }));
