@@ -398,6 +398,30 @@ let apprNames=new Set(JSON.parse(localStorage.getItem('vApprNames')||'[]'));
 function saveNames(){
   localStorage.setItem('vPrepNames',JSON.stringify(Array.from(prepNames)));
   localStorage.setItem('vApprNames',JSON.stringify(Array.from(apprNames)));
+  // Also save to Google Sheet Setting tab
+  saveNamesToSheet();
+}
+async function saveNamesToSheet(){
+  try{
+    const payload={action:'update_names',prep:Array.from(prepNames),appr:Array.from(apprNames)};
+    const fd=new FormData();
+    fd.append('payload',JSON.stringify(payload));
+    await fetch(SCRIPT_URL,{method:'POST',body:fd});
+  }catch(e){console.warn('Could not save names to sheet:',e.message);}
+}
+async function loadNamesFromSheet(){
+  try{
+    const rows=await fetchSheet('Setting');
+    rows.forEach(r=>{
+      if((r['month_key']||'').toString().trim()==='__names__'){
+        const prep=r['label']||'';
+        const appr=r['opening_balance']||'';
+        if(prep)prep.split('|').forEach(n=>{if(n.trim())prepNames.add(n.trim());});
+        if(typeof appr==='string'&&appr)appr.split('|').forEach(n=>{if(n.trim())apprNames.add(n.trim());});
+      }
+    });
+    rebuildNameSelects();
+  }catch(e){console.warn('Could not load names from sheet:',e.message);}
 }
 function rebuildNameSelects(){
   ['fPrep','fAppr'].forEach(id=>{
@@ -519,6 +543,7 @@ async function loadData(){
     data.forEach(r=>{if(r['Category'])cats.add(r['Category']);});
     rebuildCats();renderTable();updateStats();updateVnoPlaceholder();
     toastMsg('✅ Loaded','var(--sage)');
+    await loadNamesFromSheet();
   }catch(e){document.getElementById('tBody').innerHTML='<tr class="empty-row"><td colspan="7">⚠️ Could not load — make sure Google Sheet is public.</td></tr>';}
 }
 
