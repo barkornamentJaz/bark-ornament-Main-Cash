@@ -128,7 +128,28 @@ tbody td{padding:10px 14px;font-size:12.5px;vertical-align:middle;}
 .fg input:focus{border-color:var(--ink);}
 .frow{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
 
-.toast{position:fixed;bottom:22px;right:22px;z-index:999;padding:10px 18px;border-radius:7px;font-weight:600;font-size:12px;color:#fff;display:none;align-items:center;gap:8px;box-shadow:0 6px 24px rgba(0,0,0,.2);}
+/* Summary Modal */
+.sum-modal{background:var(--white);border-radius:14px;width:500px;box-shadow:0 24px 80px rgba(0,0,0,.35);}
+.sum-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:18px;}
+.sum-card{border-radius:10px;padding:16px 18px;display:flex;flex-direction:column;gap:6px;}
+.sum-card.sc-gold{background:var(--gold-bg);border:1.5px solid #e8c97a;}
+.sum-card.sc-sage{background:var(--sage-bg);border:1.5px solid #7ac9ae;}
+.sum-card.sc-rust{background:var(--rust-bg);border:1.5px solid #e8a07a;}
+.sum-card.sc-sky{background:var(--sky-bg);border:1.5px solid #7aaae8;}
+.sum-card-label{font-family:'Space Mono',monospace;font-size:9px;text-transform:uppercase;letter-spacing:1.2px;color:var(--ink4);}
+.sum-card-val{font-family:'DM Serif Display',serif;font-size:22px;line-height:1;}
+.sc-gold .sum-card-val{color:var(--gold);}
+.sc-sage .sum-card-val{color:var(--sage);}
+.sc-rust .sum-card-val{color:var(--rust);}
+.sc-sky .sum-card-val{color:var(--sky);}
+.sum-divider{height:1px;background:var(--border);margin:4px 0 16px;}
+.sum-row{display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid #f0ece4;font-size:12.5px;}
+.sum-row:last-child{border-bottom:none;}
+.sum-row-label{color:var(--ink3);}
+.sum-row-val{font-family:'Space Mono',monospace;font-size:11px;font-weight:700;color:var(--ink);}
+.sum-net-positive{color:var(--sage)!important;}
+.sum-net-negative{color:var(--rust)!important;}
+padding:10px 18px;border-radius:7px;font-weight:600;font-size:12px;color:#fff;display:none;align-items:center;gap:8px;box-shadow:0 6px 24px rgba(0,0,0,.2);}
 .toast.show{display:flex;animation:su .3s;}
 @keyframes su{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
 </style>
@@ -161,6 +182,7 @@ tbody td{padding:10px 14px;font-size:12.5px;vertical-align:middle;}
     </div>
     <div class="hero-actions">
       <button class="btn btn-ghost" onclick="loadAll()">↺ Refresh</button>
+      <button class="btn btn-ghost" onclick="openSummaryModal()">📊 View Summary</button>
       <button class="btn btn-ghost" onclick="printRegister()">🖨 Print Register</button>
       <button class="btn btn-gold" onclick="exportCSV()">⬇ Export CSV</button>
     </div>
@@ -257,6 +279,58 @@ tbody td{padding:10px 14px;font-size:12.5px;vertical-align:middle;}
     <div class="modal-ft">
       <button class="btn btn-paper" onclick="closeOBModal()">Cancel</button>
       <button class="btn btn-sage" onclick="saveOB()">✓ Save Opening Balance</button>
+    </div>
+  </div>
+</div>
+
+<!-- Summary Modal -->
+<div class="overlay" id="summaryModal">
+  <div class="sum-modal">
+    <div class="modal-hd">
+      <h3>📊 Month Summary</h3>
+      <button class="mcls" onclick="closeSummaryModal()">✕</button>
+    </div>
+    <div class="modal-bd">
+      <p style="font-size:11px;color:var(--ink4);font-family:'Space Mono',monospace;margin-bottom:14px;" id="sumPeriod">—</p>
+      <div class="sum-grid">
+        <div class="sum-card sc-gold">
+          <div class="sum-card-label">Opening Balance</div>
+          <div class="sum-card-val" id="sumOB">—</div>
+        </div>
+        <div class="sum-card sc-sky">
+          <div class="sum-card-label">Closing Balance</div>
+          <div class="sum-card-val" id="sumClosing">—</div>
+        </div>
+        <div class="sum-card sc-sage">
+          <div class="sum-card-label">Total Cash In (DR)</div>
+          <div class="sum-card-val" id="sumDR">—</div>
+        </div>
+        <div class="sum-card sc-rust">
+          <div class="sum-card-label">Total Cash Out (CR)</div>
+          <div class="sum-card-val" id="sumCR">—</div>
+        </div>
+      </div>
+      <div class="sum-divider"></div>
+      <div class="sum-row">
+        <span class="sum-row-label">Total Entries</span>
+        <span class="sum-row-val" id="sumCount">—</span>
+      </div>
+      <div class="sum-row">
+        <span class="sum-row-label">Debit Entries (Cash In)</span>
+        <span class="sum-row-val" id="sumDRCount">—</span>
+      </div>
+      <div class="sum-row">
+        <span class="sum-row-label">Credit Entries (Cash Out)</span>
+        <span class="sum-row-val" id="sumCRCount">—</span>
+      </div>
+      <div class="sum-row">
+        <span class="sum-row-label">Net Movement (DR − CR)</span>
+        <span class="sum-row-val" id="sumNet">—</span>
+      </div>
+    </div>
+    <div class="modal-ft">
+      <button class="btn btn-ghost" onclick="printRegister()" style="background:var(--ink);color:#fff;border:none;">🖨 Print Register</button>
+      <button class="btn btn-paper" onclick="closeSummaryModal()">Close</button>
     </div>
   </div>
 </div>
@@ -635,6 +709,32 @@ function exportCSV(){
   toast('CSV exported','var(--sage)');
 }
 
+function openSummaryModal(){
+  if(!currentMonthKey){toast('Please select a month first','var(--rust)');return;}
+  const ob=getOB();
+  const me=entriesForMonth(currentMonthKey);
+  const allWithBal=withBalances(me);
+  const totalDR=me.reduce((s,r)=>s+r.debit,0);
+  const totalCR=me.reduce((s,r)=>s+r.credit,0);
+  const closing=(parseFloat(ob.amt)||0)+totalDR-totalCR;
+  const net=totalDR-totalCR;
+  const drCount=me.filter(r=>r.type==='DR').length;
+  const crCount=me.filter(r=>r.type==='CR').length;
+  const parts=currentMonthKey.split('-');
+  const periodLabel=MFULL[parseInt(parts[1])-1]+' '+parts[0];
+  document.getElementById('sumPeriod').textContent='PERIOD: '+periodLabel.toUpperCase();
+  document.getElementById('sumOB').textContent=fmt(ob.amt||0);
+  document.getElementById('sumClosing').textContent=fmt(closing);
+  document.getElementById('sumDR').textContent=fmt(totalDR);
+  document.getElementById('sumCR').textContent=fmt(totalCR);
+  document.getElementById('sumCount').textContent=me.length+' entries';
+  document.getElementById('sumDRCount').textContent=drCount+' entries';
+  document.getElementById('sumCRCount').textContent=crCount+' entries';
+  const netEl=document.getElementById('sumNet');
+  netEl.textContent=fmt(net);
+  netEl.className='sum-row-val '+(net>=0?'sum-net-positive':'sum-net-negative');
+  document.getElementById('summaryModal').classList.add('open');
+}
 loadAll();
 </script>
 </body>
