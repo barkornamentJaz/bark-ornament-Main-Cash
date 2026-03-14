@@ -164,7 +164,7 @@
       <div class="card-stripe"></div>
       <div class="card-top"><div class="card-label">Cash Book Balance</div><div class="card-icon-box">💰</div></div>
       <div class="card-amount" id="cashBalance">—</div>
-      <div class="card-sub">Opening + Receipts − Payments</div>
+      <div class="card-sub" id="cashBalanceSub">Loading…</div>
     </div>
     <div class="summary-card s-amber">
       <div class="card-stripe"></div>
@@ -253,32 +253,47 @@
     try{
       const [reimbs,vouchers,settings]=await Promise.all([fetchSheet('Reimbursement'),fetchSheet('Vouchers'),fetchSheet('Setting')]);
 
-      // Get today's month key
       const now=new Date();
-      const todayKey=now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0');
+      const todayStr=now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0')+'-'+String(now.getDate()).padStart(2,'0');
 
-      // Get opening balance for current month from Setting sheet
-      let openingBalance=0;
+      // Build OB map from Setting sheet: { 'YYYY-MM': amount }
+      // Handles raw Date() strings in month_key column (Google Sheets auto-conversion)
+      const obMap={};
       settings.forEach(r=>{
-        const k=(r['month_key']||r['Month Key']||r['monthkey']||'').trim();
-        if(k===todayKey){openingBalance=parseFloat(r['opening_balance']||r['Opening Balance']||0)||0;}
+        let k=(r['month_key']||r['Month Key']||r['monthkey']||'').toString().trim();
+        if(!k)return;
+        if(k.startsWith('Date(')){const p=k.replace('Date(','').replace(')','').split(',');const d=new Date(+p[0],+p[1],+p[2]);k=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');}
+        if(/^\d{5}$/.test(k)){const d=new Date(Math.round((parseFloat(k)-25569)*86400*1000));k=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');}
+        if(k)obMap[k]=parseFloat(r['opening_balance']||r['Opening Balance']||0)||0;
       });
+
+      // Find the LATEST month key that has an OB defined and is <= today's month
+      const todayMonthKey=now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0');
+      const availableMonths=Object.keys(obMap).filter(k=>k<=todayMonthKey).sort();
+      const activeMonthKey=availableMonths.length?availableMonths[availableMonths.length-1]:'';
+      const openingBalance=activeMonthKey?obMap[activeMonthKey]:0;
 
       const drRows=reimbs.filter(r=>r['amount']||r['Amount']).map(r=>({type:'DR',date:r['Date']||r['date']||r[''],desc:r['Description']||'Cash Reimbursement',amt:parseFloat(r['amount']||r['Amount']||0)}));
       const crRows=vouchers.filter(r=>r['Amount (Rs)']||r['Amount']).map(r=>({type:'CR',date:r['Date'],desc:(r['Payee Name']||r['Payee']||'')+(r['Description']?' — '+r['Description']:''),amt:parseFloat(r['Amount (Rs)']||r['Amount']||0)}));
 
-      // Filter to current month only for balance calculation
       const allEntries=[...drRows,...crRows];
+
+      // Filter entries to the active month AND only up to today
       const monthEntries=allEntries.filter(r=>{
         const d=parseDate(r.date);
-        if(!d)return false;
+        if(!d||isNaN(d))return false;
         const mk=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');
-        return mk===todayKey;
+        if(mk!==activeMonthKey)return false;
+        const ds=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+        return ds<=todayStr;
       });
+
       const totalDR=monthEntries.filter(r=>r.type==='DR').reduce((s,r)=>s+r.amt,0);
       const totalCR=monthEntries.filter(r=>r.type==='CR').reduce((s,r)=>s+r.amt,0);
-      // Closing balance = OB + DR - CR
+
+      // TRUE closing balance = OB of latest active month + DR - CR up to today
       window._cashClosingBalance=openingBalance+totalDR-totalCR;
+      window._cashActiveMonth=activeMonthKey;
 
       // Show recent 8 entries (all time, sorted by date desc)
       const recent=allEntries.sort((a,b)=>{const da=parseDate(a.date),db=parseDate(b.date);if(!da&&!db)return 0;if(!da)return 1;if(!db)return-1;return db-da;}).slice(0,8);
@@ -307,6 +322,11 @@
     // Cash Difference = Closing Balance - (IOU Outstanding + Physical Cash)
     const diff=balance-(iouTotal+physical);
     document.getElementById('cashBalance').textContent=fmt(balance);
+    // Show which month's closing balance is displayed
+    const MFULL=['January','February','March','April','May','June','July','August','September','October','November','December'];
+    const mk=window._cashActiveMonth||'';
+    const subLabel=mk?(()=>{const[y,m]=mk.split('-');return'Closing Balance — '+MFULL[parseInt(m)-1]+' '+y;})():'Opening + Receipts − Payments';
+    document.getElementById('cashBalanceSub').textContent=subLabel;
     document.getElementById('iouOutstanding').textContent=fmt(iouTotal);
     document.getElementById('iouPending').textContent=pending.length+' pending';
     document.getElementById('physicalCash').textContent=fmt(physical);
