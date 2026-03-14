@@ -345,10 +345,12 @@ async function loadSettingsFromSheet(){
         k=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');
       }
       if(!k)return;
-      // Build a proper label if missing
+      // Build a proper label if missing or corrupted
       const parts=k.split('-');
       const defaultLabel=parts.length===2?MFULL[parseInt(parts[1])-1]+' '+parts[0]:k;
-      monthlyOB[k]={label:r['label']||defaultLabel, amt:parseFloat(r['opening_balance'])||0};
+      const rawLbl=(r['label']||'').toString().trim();
+      const safeLabel=(rawLbl&&!rawLbl.startsWith('Date(')&&!/^\d{4}-\d{2}/.test(rawLbl)&&!/^\d{5}$/.test(rawLbl))?rawLbl:defaultLabel;
+      monthlyOB[k]={label:safeLabel, amt:parseFloat(r['opening_balance'])||0};
       settingsRowMap[k]=i+2;
     });
     localStorage.setItem('monthlyOB',JSON.stringify(monthlyOB));
@@ -564,7 +566,10 @@ function openOBModal(){
   const ob=getOB();
   const parts=currentMonthKey.split('-');
   const y=parts[0],m=parts[1];
-  document.getElementById('obMonth').value=ob.label||(MFULL[parseInt(m)-1]+' '+y);
+  const cleanLabel=MFULL[parseInt(m)-1]+' '+y;
+  const rawLabel=ob.label||'';
+  const safeLabel=(rawLabel&&!rawLabel.startsWith('Date(')&&!/^\d{4}-\d{2}/.test(rawLabel))?rawLabel:cleanLabel;
+  document.getElementById('obMonth').value=safeLabel;
   document.getElementById('obDate').value=currentMonthKey+'-01';
   document.getElementById('obAmt').value=Math.floor(ob.amt||0)||'';
   document.getElementById('obCents').value=Math.round(((ob.amt||0)%1)*100)||'0';
