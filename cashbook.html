@@ -128,27 +128,33 @@ tbody td{padding:10px 14px;font-size:12.5px;vertical-align:middle;}
 .fg input:focus{border-color:var(--ink);}
 .frow{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
 
-/* Summary Modal */
-.sum-modal{background:var(--white);border-radius:14px;width:500px;box-shadow:0 24px 80px rgba(0,0,0,.35);}
-.sum-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:18px;}
-.sum-card{border-radius:10px;padding:16px 18px;display:flex;flex-direction:column;gap:6px;}
-.sum-card.sc-gold{background:var(--gold-bg);border:1.5px solid #e8c97a;}
-.sum-card.sc-sage{background:var(--sage-bg);border:1.5px solid #7ac9ae;}
-.sum-card.sc-rust{background:var(--rust-bg);border:1.5px solid #e8a07a;}
-.sum-card.sc-sky{background:var(--sky-bg);border:1.5px solid #7aaae8;}
-.sum-card-label{font-family:'Space Mono',monospace;font-size:9px;text-transform:uppercase;letter-spacing:1.2px;color:var(--ink4);}
-.sum-card-val{font-family:'DM Serif Display',serif;font-size:22px;line-height:1;}
-.sc-gold .sum-card-val{color:var(--gold);}
-.sc-sage .sum-card-val{color:var(--sage);}
-.sc-rust .sum-card-val{color:var(--rust);}
-.sc-sky .sum-card-val{color:var(--sky);}
-.sum-divider{height:1px;background:var(--border);margin:4px 0 16px;}
-.sum-row{display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid #f0ece4;font-size:12.5px;}
-.sum-row:last-child{border-bottom:none;}
-.sum-row-label{color:var(--ink3);}
-.sum-row-val{font-family:'Space Mono',monospace;font-size:11px;font-weight:700;color:var(--ink);}
-.sum-net-positive{color:var(--sage)!important;}
-.sum-net-negative{color:var(--rust)!important;}
+/* Register View Modal */
+.reg-overlay{display:none;position:fixed;inset:0;background:rgba(10,18,26,.85);z-index:400;align-items:flex-start;justify-content:center;overflow-y:auto;padding:32px 16px;backdrop-filter:blur(4px);}
+.reg-overlay.open{display:flex;}
+.reg-sheet{background:#fff;border-radius:14px;width:100%;max-width:960px;margin:auto;box-shadow:0 32px 100px rgba(0,0,0,.45);overflow:hidden;}
+.reg-toolbar{background:var(--ink);padding:14px 24px;display:flex;align-items:center;justify-content:space-between;border-radius:14px 14px 0 0;position:sticky;top:0;z-index:10;}
+.reg-toolbar-title{font-family:'DM Serif Display',serif;font-size:16px;color:#fff;display:flex;align-items:center;gap:8px;}
+.reg-toolbar-actions{display:flex;gap:8px;}
+.reg-body{padding:32px 36px 40px;font-family:'Times New Roman',serif;color:#0f1923;}
+.reg-company{text-align:center;margin-bottom:18px;}
+.reg-company h2{font-size:22px;font-weight:700;margin-bottom:2px;}
+.reg-company .reg-addr{font-size:12px;color:#5a7289;margin-bottom:3px;}
+.reg-company .reg-period{font-size:14px;font-weight:700;border-bottom:2px solid #0f1923;padding-bottom:8px;margin-top:6px;display:inline-block;}
+.reg-stats{display:flex;gap:12px;margin:18px 0;justify-content:center;flex-wrap:wrap;}
+.reg-sb{border:1.5px solid #e0dcd4;border-radius:8px;padding:10px 18px;text-align:center;min-width:130px;}
+.reg-sb .lbl{font-size:9px;text-transform:uppercase;letter-spacing:1px;color:#94aab8;margin-bottom:3px;font-family:'DM Sans',sans-serif;}
+.reg-sb .val{font-size:16px;font-weight:700;font-family:'DM Sans',sans-serif;}
+.reg-table{width:100%;border-collapse:collapse;margin-bottom:16px;font-size:12px;}
+.reg-table thead th{background:#0f1923;color:#fff;padding:9px 10px;font-size:9px;letter-spacing:1px;text-transform:uppercase;text-align:left;font-family:'DM Sans',sans-serif;}
+.reg-table thead th.r{text-align:right;}
+.reg-table tbody tr:nth-child(even){background:#f9f9f9;}
+.reg-table tbody td{padding:7px 10px;border:1px solid #e0dcd4;}
+.reg-table .ob-tr td{background:#fdf6e3;font-weight:700;}
+.reg-table .tot-tr td{background:#f0f0f0;font-weight:700;font-size:11px;font-family:'DM Sans',sans-serif;}
+.reg-sigs{display:flex;gap:40px;margin-top:48px;}
+.reg-sig{flex:1;border-top:1.5px solid #0f1923;padding-top:5px;font-size:10px;color:#5a7289;text-transform:uppercase;letter-spacing:1px;margin-top:30px;text-align:center;font-family:'DM Sans',sans-serif;}
+.reg-foot{text-align:center;font-size:9px;color:#94aab8;margin-top:14px;border-top:1px solid #e0dcd4;padding-top:8px;font-family:'DM Sans',sans-serif;}
+@media print{.reg-overlay{display:none!important;}}
 padding:10px 18px;border-radius:7px;font-weight:600;font-size:12px;color:#fff;display:none;align-items:center;gap:8px;box-shadow:0 6px 24px rgba(0,0,0,.2);}
 .toast.show{display:flex;animation:su .3s;}
 @keyframes su{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
@@ -182,7 +188,7 @@ padding:10px 18px;border-radius:7px;font-weight:600;font-size:12px;color:#fff;di
     </div>
     <div class="hero-actions">
       <button class="btn btn-ghost" onclick="loadAll()">↺ Refresh</button>
-      <button class="btn btn-ghost" onclick="openSummaryModal()">📊 View Summary</button>
+      <button class="btn btn-ghost" onclick="openRegisterView()">📋 View Register</button>
       <button class="btn btn-ghost" onclick="printRegister()">🖨 Print Register</button>
       <button class="btn btn-gold" onclick="exportCSV()">⬇ Export CSV</button>
     </div>
@@ -283,54 +289,19 @@ padding:10px 18px;border-radius:7px;font-weight:600;font-size:12px;color:#fff;di
   </div>
 </div>
 
-<!-- Summary Modal -->
-<div class="overlay" id="summaryModal">
-  <div class="sum-modal">
-    <div class="modal-hd">
-      <h3>📊 Month Summary</h3>
-      <button class="mcls" onclick="closeSummaryModal()">✕</button>
-    </div>
-    <div class="modal-bd">
-      <p style="font-size:11px;color:var(--ink4);font-family:'Space Mono',monospace;margin-bottom:14px;" id="sumPeriod">—</p>
-      <div class="sum-grid">
-        <div class="sum-card sc-gold">
-          <div class="sum-card-label">Opening Balance</div>
-          <div class="sum-card-val" id="sumOB">—</div>
-        </div>
-        <div class="sum-card sc-sky">
-          <div class="sum-card-label">Closing Balance</div>
-          <div class="sum-card-val" id="sumClosing">—</div>
-        </div>
-        <div class="sum-card sc-sage">
-          <div class="sum-card-label">Total Cash In (DR)</div>
-          <div class="sum-card-val" id="sumDR">—</div>
-        </div>
-        <div class="sum-card sc-rust">
-          <div class="sum-card-label">Total Cash Out (CR)</div>
-          <div class="sum-card-val" id="sumCR">—</div>
-        </div>
-      </div>
-      <div class="sum-divider"></div>
-      <div class="sum-row">
-        <span class="sum-row-label">Total Entries</span>
-        <span class="sum-row-val" id="sumCount">—</span>
-      </div>
-      <div class="sum-row">
-        <span class="sum-row-label">Debit Entries (Cash In)</span>
-        <span class="sum-row-val" id="sumDRCount">—</span>
-      </div>
-      <div class="sum-row">
-        <span class="sum-row-label">Credit Entries (Cash Out)</span>
-        <span class="sum-row-val" id="sumCRCount">—</span>
-      </div>
-      <div class="sum-row">
-        <span class="sum-row-label">Net Movement (DR − CR)</span>
-        <span class="sum-row-val" id="sumNet">—</span>
+<!-- Register View Modal -->
+<div class="reg-overlay" id="regModal">
+  <div class="reg-sheet">
+    <div class="reg-toolbar">
+      <div class="reg-toolbar-title">📋 Cash Book Register</div>
+      <div class="reg-toolbar-actions">
+        <button class="btn btn-ghost" onclick="printRegister()">🖨 Print</button>
+        <button class="btn btn-gold" onclick="exportCSV()">⬇ CSV</button>
+        <button class="mcls" onclick="closeRegisterView()" style="width:34px;height:34px;font-size:18px;">✕</button>
       </div>
     </div>
-    <div class="modal-ft">
-      <button class="btn btn-ghost" onclick="printRegister()" style="background:var(--ink);color:#fff;border:none;">🖨 Print Register</button>
-      <button class="btn btn-paper" onclick="closeSummaryModal()">Close</button>
+    <div class="reg-body" id="regBody">
+      <!-- populated by openRegisterView() -->
     </div>
   </div>
 </div>
@@ -709,32 +680,50 @@ function exportCSV(){
   toast('CSV exported','var(--sage)');
 }
 
-function openSummaryModal(){
+function openRegisterView(){
   if(!currentMonthKey){toast('Please select a month first','var(--rust)');return;}
-  const ob=getOB();
   const me=entriesForMonth(currentMonthKey);
   const allWithBal=withBalances(me);
   const totalDR=me.reduce((s,r)=>s+r.debit,0);
   const totalCR=me.reduce((s,r)=>s+r.credit,0);
-  const closing=(parseFloat(ob.amt)||0)+totalDR-totalCR;
-  const net=totalDR-totalCR;
-  const drCount=me.filter(r=>r.type==='DR').length;
-  const crCount=me.filter(r=>r.type==='CR').length;
+  const closing=(parseFloat(getOB().amt)||0)+totalDR-totalCR;
+  const ob=getOB();
+  const now=new Date().toLocaleString();
   const parts=currentMonthKey.split('-');
-  const periodLabel=MFULL[parseInt(parts[1])-1]+' '+parts[0];
-  document.getElementById('sumPeriod').textContent='PERIOD: '+periodLabel.toUpperCase();
-  document.getElementById('sumOB').textContent=fmt(ob.amt||0);
-  document.getElementById('sumClosing').textContent=fmt(closing);
-  document.getElementById('sumDR').textContent=fmt(totalDR);
-  document.getElementById('sumCR').textContent=fmt(totalCR);
-  document.getElementById('sumCount').textContent=me.length+' entries';
-  document.getElementById('sumDRCount').textContent=drCount+' entries';
-  document.getElementById('sumCRCount').textContent=crCount+' entries';
-  const netEl=document.getElementById('sumNet');
-  netEl.textContent=fmt(net);
-  netEl.className='sum-row-val '+(net>=0?'sum-net-positive':'sum-net-negative');
-  document.getElementById('summaryModal').classList.add('open');
+  const y=parts[0],m=parts[1];
+  const periodLabel=ob.label||(MFULL[parseInt(m)-1]+' '+y);
+
+  const rows=allWithBal.map((r,i)=>'<tr style="background:'+(i%2===0?'#fff':'#f9f9f9')+'"><td style="padding:7px 10px;border:1px solid #e0dcd4;font-size:11px;font-family:monospace">'+fmtD(r.date)+'</td><td style="padding:7px 10px;border:1px solid #e0dcd4;color:#c94a2a;font-weight:700;font-size:11px;font-family:monospace">'+(r.cheque||'')+'</td><td style="padding:7px 10px;border:1px solid #e0dcd4;font-size:11px">'+(r.desc||'--')+'</td><td style="padding:7px 10px;border:1px solid #e0dcd4;color:#2a5ac9;font-size:11px;font-family:monospace">'+(r.ref||'')+'</td><td style="padding:7px 10px;border:1px solid #e0dcd4;text-align:right;color:#2a7a5e;font-size:11px;font-family:monospace">'+(r.debit?fmt(r.debit):'')+'</td><td style="padding:7px 10px;border:1px solid #e0dcd4;text-align:right;color:#c94a2a;font-size:11px;font-family:monospace">'+(r.credit?fmt(r.credit):'')+'</td><td style="padding:7px 10px;border:1px solid #e0dcd4;text-align:right;font-weight:700;font-size:11px;font-family:monospace;color:'+(r.balance<0?'#c94a2a':'#0f1923')+'">'+fmt(r.balance)+'</td></tr>').join('');
+
+  document.getElementById('regBody').innerHTML=
+    '<div class="reg-company">'+
+      '<h2>'+CN+'</h2>'+
+      '<div class="reg-addr">'+CA+'</div>'+
+      '<div class="reg-period">Cash Book &mdash; '+periodLabel+'</div>'+
+    '</div>'+
+    '<div class="reg-stats">'+
+      '<div class="reg-sb"><div class="lbl">Opening Balance</div><div class="val" style="color:#c9922a">'+fmt(ob.amt||0)+'</div></div>'+
+      '<div class="reg-sb"><div class="lbl">Total Debit (Cash In)</div><div class="val" style="color:#2a7a5e">'+fmt(totalDR)+'</div></div>'+
+      '<div class="reg-sb"><div class="lbl">Total Credit (Cash Out)</div><div class="val" style="color:#c94a2a">'+fmt(totalCR)+'</div></div>'+
+      '<div class="reg-sb"><div class="lbl">Closing Balance</div><div class="val" style="color:#2a5ac9">'+fmt(closing)+'</div></div>'+
+    '</div>'+
+    '<table class="reg-table">'+
+      '<thead><tr><th>Date</th><th>Cheque No</th><th>Description</th><th>Voucher No</th><th class="r">Debit (Rs)</th><th class="r">Credit (Rs)</th><th class="r">Balance (Rs)</th></tr></thead>'+
+      '<tbody>'+
+        '<tr class="ob-tr"><td style="padding:7px 10px;border:1px solid #e0dcd4;font-size:11px;font-family:monospace">01/'+m+'/'+y+'</td><td style="padding:7px 10px;border:1px solid #e0dcd4"></td><td style="padding:7px 10px;border:1px solid #e0dcd4;font-size:11px;color:#c9922a">Opening Balance</td><td style="padding:7px 10px;border:1px solid #e0dcd4"></td><td style="padding:7px 10px;border:1px solid #e0dcd4"></td><td style="padding:7px 10px;border:1px solid #e0dcd4"></td><td style="padding:7px 10px;border:1px solid #e0dcd4;text-align:right;color:#c9922a;font-weight:bold;font-family:monospace">'+fmt(ob.amt||0)+'</td></tr>'+
+        rows+
+        '<tr class="tot-tr"><td colspan="4" style="text-align:right;border:1px solid #e0dcd4;padding:8px">TOTAL</td><td style="text-align:right;border:1px solid #e0dcd4;color:#2a7a5e;padding:8px;font-family:monospace">'+fmt(totalDR)+'</td><td style="text-align:right;border:1px solid #e0dcd4;color:#c94a2a;padding:8px;font-family:monospace">'+fmt(totalCR)+'</td><td style="text-align:right;border:1px solid #e0dcd4;padding:8px;font-family:monospace">'+fmt(closing)+'</td></tr>'+
+      '</tbody>'+
+    '</table>'+
+    '<div class="reg-sigs"><div class="reg-sig">Prepared by</div><div class="reg-sig">Reviewed by</div><div class="reg-sig">Approved by</div></div>'+
+    '<div class="reg-foot">Generated: '+now+' &nbsp;|&nbsp; '+CN+'</div>';
+
+  document.getElementById('regModal').classList.add('open');
 }
+function closeRegisterView(){
+  document.getElementById('regModal').classList.remove('open');
+}
+
 loadAll();
 </script>
 </body>
