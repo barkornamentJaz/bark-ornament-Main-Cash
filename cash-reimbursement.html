@@ -279,7 +279,7 @@ function showToast(msg, color) {
 async function loadData() {
   document.getElementById('tableBody').innerHTML = '<tr class="loading-row"><td colspan="7">Loading…</td></tr>';
   try {
-    const res = await fetch(BASE + encodeURIComponent('Reimbursement'));
+    const res = await fetch(BASE + encodeURIComponent('Reimbursement') + '&_=' + Date.now());
     const raw = await res.text();
     const j = JSON.parse(raw.substring(47).slice(0,-2));
     // Column A header is blank in your sheet — force it to 'date'
@@ -400,7 +400,11 @@ async function addEntry() {
   document.getElementById('inAmount').value = '';
   document.getElementById('inRef').value = '';
 
-  // Save to Google Sheets
+  // Save to Google Sheets.
+  // NOTE: mode:'no-cors' makes the response opaque — we cannot read whether
+  // the Apps Script actually wrote the row or hit an error (e.g. wrong tab
+  // name, wrong sheet permissions). So instead of trusting a blind "it sent",
+  // we re-read the sheet afterward and confirm the row is really there.
   try {
     showToast('💾 Saving to Google Sheets…', 'var(--blue)');
     await fetch(SCRIPT_URL, {
@@ -413,7 +417,33 @@ async function addEntry() {
         data: entry
       }))
     });
-    showToast('✅ Entry saved to Google Sheets!', 'var(--green)');
+
+    // Give Sheets a moment to commit, then verify by re-reading the live data.
+    setTimeout(async () => {
+      try {
+        const res = await fetch(BASE + encodeURIComponent('Reimbursement') + '&_=' + Date.now());
+        const raw = await res.text();
+        const j = JSON.parse(raw.substring(47).slice(0, -2));
+        const cols = j.table.cols.map((c, i) => c.label || (i === 0 ? 'date' : 'col' + i));
+        const rows = j.table.rows.map(r => {
+          const obj = {};
+          cols.forEach((c, i) => { obj[c] = (r.c && r.c[i] && r.c[i].v !== null) ? r.c[i].v : ''; });
+          return obj;
+        });
+        const found = rows.some(r =>
+          String(r['Description'] || '') === entry['Description'] &&
+          parseFloat(r['amount'] || r['Amount'] || 0) === entry['amount'] &&
+          String(r['Reference'] || '') === entry['Reference']
+        );
+        if (found) {
+          showToast('✅ Confirmed saved to Google Sheets!', 'var(--green)');
+        } else {
+          showToast('❌ Not found in Sheet — check tab name "Reimbursement" & Apps Script deployment', 'var(--red)');
+        }
+      } catch (verifyErr) {
+        showToast('⚠️ Sent, but could not verify. Check the Sheet manually.', 'var(--amber)');
+      }
+    }, 1800);
   } catch(e) {
     showToast('⚠️ Added to view only. Sheet save failed.', 'var(--amber)');
   }
