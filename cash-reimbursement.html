@@ -83,6 +83,10 @@
   .act-btn{padding:4px 10px;border-radius:5px;border:none;cursor:pointer;font-size:11px;font-weight:600;transition:all .18s;}
   .act-print{background:var(--blue-bg);color:var(--blue);}
   .act-print:hover{background:var(--blue);color:#fff;}
+  .act-edit{background:var(--amber-bg);color:var(--amber);}
+  .act-edit:hover{background:var(--amber);color:#fff;}
+  .act-delete{background:var(--red-bg);color:var(--red);}
+  .act-delete:hover{background:var(--red);color:#fff;}
   .modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:200;align-items:center;justify-content:center;}
   .modal-overlay.show{display:flex;}
   .modal{background:#fff;border-radius:14px;padding:28px;width:420px;box-shadow:0 8px 40px rgba(0,0,0,.15);}
@@ -159,14 +163,17 @@
   </div>
 
   <div class="form-card">
-    <div class="form-card-title">➕ Add New Reimbursement</div>
+    <div class="form-card-title" id="formTitle">➕ Add New Reimbursement</div>
     <div class="form-grid">
       <div class="form-group"><label>Date</label><input type="date" id="inDate"/></div>
       <div class="form-group"><label>Received From</label><input type="text" id="inName" placeholder="Person name"/></div>
       <div class="form-group"><label>Description</label><input type="text" id="inDesc" placeholder="Purpose / details"/></div>
       <div class="form-group"><label>Amount (Rs)</label><input type="number" id="inAmount" placeholder="0.00" min="0" step="0.01"/></div>
       <div class="form-group"><label>Reference</label><input type="text" id="inRef" placeholder="Receipt / ref no."/></div>
-      <div class="form-group"><label>&nbsp;</label><button class="btn btn-green" onclick="addEntry()">➕ Add</button></div>
+      <div class="form-group" style="flex-direction:row;gap:8px">
+        <button class="btn btn-green" id="saveBtn" onclick="saveEntry()">➕ Add</button>
+        <button class="btn btn-outline" id="cancelBtn" onclick="cancelEdit()" style="display:none">✕ Cancel</button>
+      </div>
     </div>
   </div>
 
@@ -267,6 +274,12 @@ function parseDate(v) {
   return new Date(v);
 }
 
+function toInputDate(v) {
+  const d = parseDate(v);
+  if (!d || isNaN(d.getTime())) return '';
+  return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+}
+
 function showToast(msg, color) {
   const t = document.getElementById('toast');
   t.textContent = msg;
@@ -287,9 +300,10 @@ async function loadData() {
     // Keep ALL rows that have any non-empty cell
     allData = j.table.rows
       .filter(r => r.c && r.c.some(cell => cell && cell.v !== null && cell.v !== ''))
-      .map(r => {
+      .map((r, idx) => {
         const obj = {};
         cols.forEach((c, i) => { obj[c] = (r.c[i] && r.c[i].v !== null) ? r.c[i].v : ''; });
+        obj._sheetRow = idx + 2; // row 1 is header, data starts at row 2
         return obj;
       })
       .reverse(); // newest first
@@ -353,7 +367,7 @@ function renderTable() {
       <td style="color:var(--text2);max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${r['Description']||''}">${(()=>{const d=r['Description']||'';const p=d.split(' — ');return p.length>1?p.slice(1).join(' — '):'';})()||'—'}</td>
       <td class="amount-green">${fmt(r['amount'] || r['Amount'])}</td>
       <td style="color:var(--text3);font-size:11px">${r['Reference'] || '—'}</td>
-      <td><button class="act-btn act-print" onclick="openReceipt(${i})">🖨️ Receipt</button></td>
+      <td><button class="act-btn act-print" onclick="openReceipt(${i})">🖨️</button> <button class="act-btn act-edit" onclick="startEdit(${i})">✏️</button> <button class="act-btn act-delete" onclick="deleteEntry(${i})">🗑️</button></td>
     </tr>
   `).join('');
   window._filtered = filtered;
@@ -366,8 +380,10 @@ function clearFilters() {
   renderTable();
 }
 
-// ── Add Entry ─────────────────────────────────────────────────
-async function addEntry() {
+// ── Add / Edit Entry ───────────────────────────────────────────
+let editingRow = null; // _sheetRow of the entry being edited, or null when adding new
+
+async function saveEntry() {
   const date = document.getElementById('inDate').value;
   const name = document.getElementById('inName').value.trim();
   const desc = document.getElementById('inDesc').value.trim();
@@ -389,6 +405,32 @@ async function addEntry() {
     'Reference': ref
   };
 
+  // ── EDITING an existing row ──────────────────────────────────
+  if (editingRow) {
+    const rowToUpdate = editingRow;
+    cancelEdit(); // reset form UI immediately
+    showToast('💾 Saving changes…', 'var(--blue)');
+    try {
+      await fetch(SCRIPT_URL, {
+        method: 'POST',
+        mode: 'no-cors',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: 'payload=' + encodeURIComponent(JSON.stringify({
+          action: 'update',
+          sheet: 'Reimbursement',
+          rowNum: rowToUpdate,
+          data: entry
+        }))
+      });
+      // mode:'no-cors' hides errors, so reload from the sheet to confirm.
+      setTimeout(() => { loadData(); showToast('✅ Entry updated', 'var(--green)'); }, 1200);
+    } catch(e) {
+      showToast('⚠️ Update may have failed — reload to check', 'var(--amber)');
+    }
+    return;
+  }
+
+  // ── ADDING a new row ──────────────────────────────────────────
   // Optimistically update UI
   allData.unshift(entry);
   renderTable();
@@ -446,6 +488,66 @@ async function addEntry() {
     }, 1800);
   } catch(e) {
     showToast('⚠️ Added to view only. Sheet save failed.', 'var(--amber)');
+  }
+}
+
+function startEdit(i) {
+  const r = (window._filtered || allData)[i];
+  if (!r._sheetRow) {
+    showToast('⚠️ Row number missing — click Refresh and try again', 'var(--amber)');
+    return;
+  }
+  editingRow = r._sheetRow;
+
+  const d = r['Description'] || '';
+  const parts = d.split(' — ');
+  document.getElementById('inDate').value = toInputDate(r['date'] || r['Date']);
+  document.getElementById('inName').value = parts.length > 1 ? parts[0] : d;
+  document.getElementById('inDesc').value = parts.length > 1 ? parts.slice(1).join(' — ') : '';
+  document.getElementById('inAmount').value = r['amount'] || r['Amount'] || '';
+  document.getElementById('inRef').value = r['Reference'] || '';
+
+  document.getElementById('formTitle').textContent = '✏️ Edit Reimbursement';
+  document.getElementById('saveBtn').textContent = '💾 Save Changes';
+  document.getElementById('cancelBtn').style.display = 'flex';
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function cancelEdit() {
+  editingRow = null;
+  document.getElementById('inName').value = '';
+  document.getElementById('inDesc').value = '';
+  document.getElementById('inAmount').value = '';
+  document.getElementById('inRef').value = '';
+  document.getElementById('inDate').value = new Date().toISOString().split('T')[0];
+  document.getElementById('formTitle').textContent = '➕ Add New Reimbursement';
+  document.getElementById('saveBtn').textContent = '➕ Add';
+  document.getElementById('cancelBtn').style.display = 'none';
+}
+
+async function deleteEntry(i) {
+  const r = (window._filtered || allData)[i];
+  if (!r._sheetRow) {
+    showToast('⚠️ Row number missing — click Refresh and try again', 'var(--amber)');
+    return;
+  }
+  if (!confirm('Delete this reimbursement entry? This cannot be undone.')) return;
+
+  showToast('🗑️ Deleting…', 'var(--blue)');
+  try {
+    await fetch(SCRIPT_URL, {
+      method: 'POST',
+      mode: 'no-cors',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: 'payload=' + encodeURIComponent(JSON.stringify({
+        action: 'delete',
+        sheet: 'Reimbursement',
+        row: r._sheetRow
+      }))
+    });
+    setTimeout(() => { loadData(); showToast('✅ Entry deleted', 'var(--green)'); }, 1200);
+  } catch(e) {
+    showToast('⚠️ Delete may have failed — reload to check', 'var(--amber)');
   }
 }
 
