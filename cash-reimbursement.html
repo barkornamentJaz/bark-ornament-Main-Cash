@@ -380,6 +380,25 @@ function clearFilters() {
   renderTable();
 }
 
+// ── Apps Script call that actually reads the response ──────────
+// Content-Type: text/plain avoids the CORS preflight browsers would
+// otherwise block (Apps Script doesn't handle OPTIONS requests), while
+// still letting us read back the real success/error JSON — unlike
+// mode:'no-cors', which hides everything including thrown exceptions.
+async function gasPost(payload) {
+  const res = await fetch(SCRIPT_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+    body: JSON.stringify(payload)
+  });
+  const text = await res.text();
+  try {
+    return JSON.parse(text);
+  } catch (e) {
+    return { success: false, error: 'Unreadable response: ' + text.slice(0, 200) };
+  }
+}
+
 // ── Add / Edit Entry ───────────────────────────────────────────
 let editingRow = null; // _sheetRow of the entry being edited, or null when adding new
 
