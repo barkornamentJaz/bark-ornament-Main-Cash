@@ -409,6 +409,18 @@ async function saveEntry() {
   if (editingRow) {
     const rowToUpdate = editingRow;
     cancelEdit(); // reset form UI immediately
+
+    // Update our own in-memory copy right away — don't wait on a reload.
+    // Google's public gviz sheet-reading endpoint can cache for a minute
+    // or more, so re-fetching immediately after a save often shows the
+    // OLD values and looks like the update failed even though it worked.
+    const idx = allData.findIndex(r => r._sheetRow === rowToUpdate);
+    if (idx !== -1) {
+      allData[idx] = Object.assign({}, allData[idx], entry, { _sheetRow: rowToUpdate });
+      renderTable();
+      updateSummary();
+    }
+
     showToast('💾 Saving changes…', 'var(--blue)');
     try {
       await fetch(SCRIPT_URL, {
@@ -422,10 +434,9 @@ async function saveEntry() {
           data: entry
         }))
       });
-      // mode:'no-cors' hides errors, so reload from the sheet to confirm.
-      setTimeout(() => { loadData(); showToast('✅ Entry updated', 'var(--green)'); }, 1200);
+      showToast('✅ Changes saved to Google Sheets', 'var(--green)');
     } catch(e) {
-      showToast('⚠️ Update may have failed — reload to check', 'var(--amber)');
+      showToast('⚠️ Update may have failed — check the Sheet directly', 'var(--amber)');
     }
     return;
   }
@@ -533,6 +544,13 @@ async function deleteEntry(i) {
   }
   if (!confirm('Delete this reimbursement entry? This cannot be undone.')) return;
 
+  // Remove from our own in-memory copy right away — same gviz-caching
+  // reasoning as the edit fix above: don't wait on a reload to show the change.
+  const rowToDelete = r._sheetRow;
+  allData = allData.filter(row => row._sheetRow !== rowToDelete);
+  renderTable();
+  updateSummary();
+
   showToast('🗑️ Deleting…', 'var(--blue)');
   try {
     await fetch(SCRIPT_URL, {
@@ -542,12 +560,12 @@ async function deleteEntry(i) {
       body: 'payload=' + encodeURIComponent(JSON.stringify({
         action: 'delete',
         sheet: 'Reimbursement',
-        row: r._sheetRow
+        row: rowToDelete
       }))
     });
-    setTimeout(() => { loadData(); showToast('✅ Entry deleted', 'var(--green)'); }, 1200);
+    showToast('✅ Entry deleted from Google Sheets', 'var(--green)');
   } catch(e) {
-    showToast('⚠️ Delete may have failed — reload to check', 'var(--amber)');
+    showToast('⚠️ Delete may have failed — check the Sheet directly', 'var(--amber)');
   }
 }
 
