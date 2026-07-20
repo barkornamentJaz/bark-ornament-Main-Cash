@@ -323,32 +323,19 @@ async function saveCount(){
   const grand=document.getElementById('grandTotal').textContent;
   const now=new Date().toLocaleString();
 
-  // Map denomination value to count — matching your sheet's Cash | Count structure
-  const counts={
-    5000: parseInt(document.getElementById('n5000').value)||0,
-    2000: parseInt(document.getElementById('n2000').value)||0,
-    1000: parseInt(document.getElementById('n1000').value)||0,
-    500:  parseInt(document.getElementById('n500').value)||0,
-    100:  parseInt(document.getElementById('n100').value)||0,
-    50:   parseInt(document.getElementById('n50').value)||0,
-    20:   parseInt(document.getElementById('n20').value)||0,
-    10:   parseInt(document.getElementById('n10').value)||0,
-    5:    parseInt(document.getElementById('c5').value)||0,
-    2:    parseInt(document.getElementById('c2').value)||0,
-    1:    parseInt(document.getElementById('c1').value)||0,
-  };
-  // Separately handle Rs10 coin (same denomination as Rs10 note)
-  const c10Count = parseInt(document.getElementById('c10').value)||0;
+  // Build counts as an array with denom + type, so Rs 10 Note and Rs 10 Coin
+  // (same "Cash" value, 10) don't collide anymore. Code.gs now matches rows
+  // by Cash AND Type.
+  const counts = [
+    ...NOTES.map(d => ({ denom: d.val, type: 'Note', count: parseInt(document.getElementById(d.id).value) || 0 })),
+    ...COINS.map(d => ({ denom: d.val, type: 'Coin', count: parseInt(document.getElementById(d.id).value) || 0 })),
+  ];
 
   // Save locally - use input IDs as keys so load/restore is exact
-  const snapshot = {
-    n5000: counts[5000], n2000: counts[2000], n1000: counts[1000],
-    n500: counts[500], n100: counts[100], n50: counts[50],
-    n20: counts[20], n10: counts[10],
-    c10: parseInt(document.getElementById('c10').value)||0,
-    c5: counts[5], c2: counts[2], c1: counts[1],
-    savedAt: now, total: grand
-  };
+  const snapshot = { savedAt: now, total: grand };
+  [...NOTES, ...COINS].forEach(d => {
+    snapshot[d.id] = parseInt(document.getElementById(d.id).value) || 0;
+  });
   localStorage.setItem('lastCashCount', JSON.stringify(snapshot));
   renderLastSaved();
 
@@ -380,12 +367,15 @@ async function loadSheetCounts(){
     const j=JSON.parse(raw.substring(47).slice(0,-2));
     const cols=j.table.cols.map(c=>c.label);
     const rows=j.table.rows.map(r=>Object.fromEntries(cols.map((c,i)=>[c,r.c[i]?r.c[i].v:''])));
-    // Map denomination to input id
-    const denomMap={5000:'n5000',2000:'n2000',1000:'n1000',500:'n500',100:'n100',50:'n50',20:'n20',10:'n10',5:'c5',2:'c2',1:'c1'};
+    // Map denom+type to input id (fixes Rs10 Note vs Rs10 Coin collision)
+    const idMap={};
+    NOTES.forEach(d=>{ idMap[d.val+'|note']=d.id; });
+    COINS.forEach(d=>{ idMap[d.val+'|coin']=d.id; });
     rows.forEach(r=>{
       const denom=parseFloat(r['Cash']||0);
+      const type=String(r['Type']||'').trim().toLowerCase();
       const cnt=parseFloat(r['Count']||0);
-      const id=denomMap[denom];
+      const id=idMap[denom+'|'+type];
       if(id){const el=document.getElementById(id);if(el)el.value=cnt;}
     });
     calc();
